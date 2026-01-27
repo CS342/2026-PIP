@@ -1,71 +1,95 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>CS342 Pressure Dashboard</title>
+  <title>Pressure Injury Prevention Dashboard</title>
 
   <style>
-    :root{
-      --bg0:#05070d;
-      --bg1:#0b1020;
+    :root {
+      --bg0: #05070d;
+      --bg1: #0b1020;
       --border: rgba(255,255,255,.12);
       --text: rgba(255,255,255,.92);
       --muted: rgba(255,255,255,.62);
       --shadow: 0 24px 80px rgba(0,0,0,.55);
-      --radius: 22px;
+      --radius: 18px;
+      
+      /* Status colors */
+      --green: #00ffcc;
+      --green-bg: rgba(0,255,204,.12);
+      --yellow: #ffcc00;
+      --yellow-bg: rgba(255,204,0,.12);
+      --red: #ff4466;
+      --red-bg: rgba(255,68,102,.12);
+      --blue: #66aaff;
+      --blue-bg: rgba(102,170,255,.12);
     }
 
-    *{ box-sizing:border-box; }
-    html,body{ height:100%; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
 
-    body{
-      margin:0;
-      color:var(--text);
+    body {
+      margin: 0;
+      color: var(--text);
       font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-                   "SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif;
+                   "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
       background:
         radial-gradient(900px 500px at 18% 10%, rgba(120, 140, 255, .28), transparent 55%),
         radial-gradient(700px 420px at 80% 22%, rgba(0, 255, 204, .16), transparent 55%),
         radial-gradient(900px 700px at 55% 92%, rgba(255, 0, 170, .10), transparent 60%),
         linear-gradient(180deg, var(--bg0), var(--bg1));
+      min-height: 100vh;
     }
 
-    .wrap{ max-width: 1100px; margin: 0 auto; padding: 34px 22px 42px; }
-
-    .topbar{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:16px;
-      margin-bottom: 18px;
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 28px 22px 42px;
     }
 
-    h1{
-      margin:0;
-      font-size: 32px;
+    /* Header */
+    .header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .header-left h1 {
+      margin: 0;
+      font-size: 28px;
       letter-spacing: -0.02em;
-      font-weight: 650;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
-    .sub{
-      margin-top: 8px;
+    .header-left h1 .icon {
+      font-size: 32px;
+    }
+
+    .sub {
+      margin-top: 6px;
       color: var(--muted);
       font-size: 13px;
     }
 
-    .pills{
-      display:flex;
-      gap:10px;
+    .pills {
+      display: flex;
+      gap: 10px;
       flex-wrap: wrap;
-      justify-content:flex-end;
+      justify-content: flex-end;
     }
 
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding: 10px 12px;
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
       border-radius: 999px;
       background: rgba(255,255,255,.06);
       border: 1px solid rgba(255,255,255,.10);
@@ -73,77 +97,428 @@
       font-size: 13px;
       white-space: nowrap;
     }
-    .pill b{ color: var(--text); font-weight: 650; }
 
-    .dot{
-      width:8px; height:8px; border-radius:999px;
-      background: rgba(0,255,204,.95);
-      box-shadow: 0 0 0 6px rgba(0,255,204,.12);
+    .pill b { color: var(--text); font-weight: 600; }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 0 6px var(--green-bg);
+      animation: pulse 2s ease-in-out infinite;
     }
 
-    code{
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    code {
       background: rgba(255,255,255,.08);
       border: 1px solid rgba(255,255,255,.12);
-      padding: 2px 7px;
+      padding: 2px 8px;
       border-radius: 999px;
       color: var(--text);
+      font-family: ui-monospace, "SF Mono", Monaco, monospace;
+      font-size: 12px;
     }
 
-    .card{
-      background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
+    /* Grid Layout */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 16px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
       border: 1px solid var(--border);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
-      overflow:hidden;
+      overflow: hidden;
     }
 
-    .cardInner{ padding: 18px 18px 16px; }
+    .card-header {
+      padding: 16px 18px 12px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
 
-    .big{
-      font-size: 54px;
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-body {
+      padding: 18px;
+    }
+
+    /* Pressure Card - Main */
+    .pressure-card {
+      grid-column: span 8;
+    }
+
+    .big-value {
+      font-size: 56px;
       font-weight: 700;
       letter-spacing: -0.03em;
       line-height: 1;
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
     }
 
-    .metaRow{ display:flex; gap:10px; margin-top: 12px; flex-wrap: wrap; }
+    .big-value .unit {
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--muted);
+    }
 
-    .chartCard{
+    .meta-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    /* Threshold Bands */
+    .threshold-bands {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .band {
+      flex: 1;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      text-align: center;
+      border: 1px solid transparent;
+      transition: all 0.3s ease;
+    }
+
+    .band.low {
+      background: var(--green-bg);
+      border-color: rgba(0,255,204,.25);
+      color: var(--green);
+    }
+
+    .band.moderate {
+      background: var(--yellow-bg);
+      border-color: rgba(255,204,0,.25);
+      color: var(--yellow);
+    }
+
+    .band.high {
+      background: var(--red-bg);
+      border-color: rgba(255,68,102,.25);
+      color: var(--red);
+    }
+
+    .band.active {
+      transform: scale(1.05);
+      box-shadow: 0 4px 20px rgba(0,0,0,.3);
+    }
+
+    .band .label {
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .band .range {
+      font-size: 11px;
+      opacity: 0.8;
+      margin-top: 2px;
+    }
+
+    /* Chart */
+    .chart-container {
       margin-top: 16px;
       padding: 14px;
-      border-top: 1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.02);
+      border-top: 1px solid rgba(255,255,255,.08);
+      background: rgba(0,0,0,.15);
     }
 
-    canvas{
-      width:100%;
-      height: 380px;
-      display:block;
-      border-radius: 16px;
-      background: rgba(0,0,0,.22);
-      border: 1px solid rgba(255,255,255,.10);
+    canvas {
+      width: 100%;
+      height: 280px;
+      display: block;
+      border-radius: 12px;
+      background: rgba(0,0,0,.25);
+      border: 1px solid rgba(255,255,255,.08);
     }
 
-    .err{
+    /* Sustained Load Indicator */
+    .sustained-load {
+      margin-top: 12px;
+      padding: 12px 14px;
+      background: rgba(255,68,102,.08);
+      border: 1px solid rgba(255,68,102,.2);
+      border-radius: 10px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sustained-load.visible {
+      display: flex;
+    }
+
+    .sustained-load .icon {
+      font-size: 18px;
+    }
+
+    .sustained-load .text {
+      font-size: 13px;
+      color: var(--red);
+    }
+
+    .sustained-load .text b {
+      color: var(--text);
+    }
+
+    /* Side Cards */
+    .side-cards {
+      grid-column: span 4;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Condition Score */
+    .score-card .score-display {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .score-ring {
+      position: relative;
+      width: 100px;
+      height: 100px;
+    }
+
+    .score-ring svg {
+      transform: rotate(-90deg);
+    }
+
+    .score-ring .bg {
+      fill: none;
+      stroke: rgba(255,255,255,.1);
+      stroke-width: 8;
+    }
+
+    .score-ring .progress {
+      fill: none;
+      stroke: var(--green);
+      stroke-width: 8;
+      stroke-linecap: round;
+      stroke-dasharray: 251.2;
+      stroke-dashoffset: 251.2;
+      transition: stroke-dashoffset 0.8s ease, stroke 0.5s ease;
+    }
+
+    .score-ring .score-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .score-status {
+      flex: 1;
+    }
+
+    .score-status .status-label {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .score-status .status-label.good { color: var(--green); }
+    .score-status .status-label.watch { color: var(--yellow); }
+    .score-status .status-label.risk { color: var(--red); }
+
+    .score-drivers {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+
+    .driver {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .driver .indicator {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    /* Temperature Card */
+    .temp-card .temp-display {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .temp-value {
+      font-size: 36px;
+      font-weight: 700;
+    }
+
+    .temp-unit {
+      font-size: 16px;
+      color: var(--muted);
+    }
+
+    .temp-placeholder {
+      color: var(--muted);
+      font-size: 14px;
+      font-style: italic;
+    }
+
+    .temp-meta {
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .mini-chart {
+      height: 60px;
+      margin-top: 12px;
+      background: rgba(0,0,0,.2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 12px;
+      border: 1px dashed rgba(255,255,255,.1);
+    }
+
+    /* Device Lifecycle Card */
+    .lifecycle-card .lifecycle-items {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .lifecycle-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .lifecycle-item .label {
+      font-size: 13px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .lifecycle-item .value {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    /* Bottom Stats Row */
+    .stats-row {
+      grid-column: span 12;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .stat-card {
+      text-align: center;
+      padding: 20px;
+    }
+
+    .stat-card .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .stat-card .stat-label {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Error display */
+    .err {
       margin-top: 10px;
-      color: rgba(255,180,180,.9);
+      color: var(--red);
       font-size: 13px;
       min-height: 18px;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .pressure-card {
+        grid-column: span 12;
+      }
+      .side-cards {
+        grid-column: span 12;
+      }
+      .stats-row {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 600px) {
+      .header {
+        flex-direction: column;
+      }
+      .pills {
+        justify-content: flex-start;
+      }
+      .stats-row {
+        grid-template-columns: 1fr;
+      }
+      .big-value {
+        font-size: 42px;
+      }
     }
   </style>
 </head>
 
 <body>
   <div class="wrap">
-    <div class="topbar">
-      <div>
-        <h1>CS342 Pressure Dashboard</h1>
+    <!-- Header -->
+    <div class="header">
+      <div class="header-left">
+        <h1>
+          <span class="icon">🛡️</span>
+          Pressure Injury Prevention Dashboard
+        </h1>
         <div class="sub">
-          Live stream • last 50 readings •
-          device filter: <code id="devLabel">esp32-01</code>
-          <span style="opacity:.75">(set to “all” by editing DEVICE_FILTER)</span>
+          Live stream • Rolling window •
+          Device: <code id="devLabel">esp32-01</code>
         </div>
       </div>
 
@@ -154,17 +529,185 @@
       </div>
     </div>
 
-    <div class="card">
-      <div class="cardInner">
-        <div class="big" id="latestRaw">—</div>
-        <div class="metaRow">
-          <div class="pill">latest zone: <b id="latestZone">—</b></div>
+    <!-- Main Dashboard Grid -->
+    <div class="dashboard-grid">
+      <!-- Pressure Card (Main) -->
+      <div class="card pressure-card">
+        <div class="card-header">
+          <div class="card-title">
+            <span>📊</span> Real-Time Pressure
+          </div>
+          <div class="pill" style="padding: 6px 10px; font-size: 11px;">
+            Zone: <b id="latestZone">—</b>
+          </div>
         </div>
-        <div class="err" id="err"></div>
+        
+        <div class="card-body">
+          <div class="big-value">
+            <span id="latestRaw">—</span>
+            <span class="unit" id="pressureUnit">Raw ADC</span>
+          </div>
+          
+          <div class="meta-row">
+            <div class="pill">kPa: <b id="pressureKpa">—</b></div>
+            <div class="pill">Peak: <b id="peakValue">—</b></div>
+            <div class="pill">Avg: <b id="avgValue">—</b></div>
+          </div>
+
+          <!-- Threshold Bands -->
+          <div class="threshold-bands">
+            <div class="band low" id="bandLow">
+              <div class="label">Low</div>
+              <div class="range">&lt; 1000</div>
+            </div>
+            <div class="band moderate" id="bandModerate">
+              <div class="label">Moderate</div>
+              <div class="range">1000 - 2500</div>
+            </div>
+            <div class="band high" id="bandHigh">
+              <div class="label">High</div>
+              <div class="range">&gt; 2500</div>
+            </div>
+          </div>
+
+          <!-- Sustained Load Alert -->
+          <div class="sustained-load" id="sustainedLoad">
+            <span class="icon">⚠️</span>
+            <span class="text">
+              Sustained load detected: <b id="sustainedTime">0</b> seconds above threshold
+            </span>
+          </div>
+
+          <div class="err" id="err"></div>
+        </div>
+
+        <div class="chart-container">
+          <canvas id="chart"></canvas>
+        </div>
       </div>
 
-      <div class="chartCard">
-        <canvas id="chart"></canvas>
+      <!-- Side Cards -->
+      <div class="side-cards">
+        <!-- Condition Score Card -->
+        <div class="card score-card">
+          <div class="card-header">
+            <div class="card-title">
+              <span>🎯</span> Condition Score
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="score-display">
+              <div class="score-ring">
+                <svg width="100" height="100" viewBox="0 0 100 100">
+                  <circle class="bg" cx="50" cy="50" r="40"/>
+                  <circle class="progress" id="scoreProgress" cx="50" cy="50" r="40"/>
+                </svg>
+                <div class="score-text" id="scoreValue">—</div>
+              </div>
+              <div class="score-status">
+                <div class="status-label good" id="scoreLabel">Good</div>
+                <div style="font-size: 12px; color: var(--muted);">
+                  Based on current readings
+                </div>
+              </div>
+            </div>
+            <div class="score-drivers">
+              <div class="driver">
+                <span class="indicator" id="driverPressure" style="background: var(--green);"></span>
+                <span>Pressure levels</span>
+              </div>
+              <div class="driver">
+                <span class="indicator" style="background: var(--muted);"></span>
+                <span>Temperature (pending)</span>
+              </div>
+              <div class="driver">
+                <span class="indicator" style="background: var(--muted);"></span>
+                <span>Usage patterns (pending)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Temperature Card -->
+        <div class="card temp-card">
+          <div class="card-header">
+            <div class="card-title">
+              <span>🌡️</span> Temperature
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="temp-display">
+              <span class="temp-value" id="tempValue">—</span>
+              <span class="temp-unit">°C</span>
+            </div>
+            <div class="temp-placeholder" id="tempPlaceholder">
+              Sensor not connected
+            </div>
+            <div class="temp-meta">
+              Last reading: <span id="tempLastReading">N/A</span>
+            </div>
+            <div class="mini-chart">
+              Trend chart available when sensor active
+            </div>
+          </div>
+        </div>
+
+        <!-- Device Lifecycle Card -->
+        <div class="card lifecycle-card">
+          <div class="card-header">
+            <div class="card-title">
+              <span>📱</span> Device Lifecycle
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="lifecycle-items">
+              <div class="lifecycle-item">
+                <div class="label">
+                  <span>📅</span> Last Scanned
+                </div>
+                <div class="value" id="lastScanned">—</div>
+              </div>
+              <div class="lifecycle-item">
+                <div class="label">
+                  <span>⏱️</span> Days of Use
+                </div>
+                <div class="value" id="daysOfUse">—</div>
+              </div>
+              <div class="lifecycle-item">
+                <div class="label">
+                  <span>🔋</span> Device Status
+                </div>
+                <div class="value" style="color: var(--green);" id="deviceStatus">Active</div>
+              </div>
+              <div class="lifecycle-item">
+                <div class="label">
+                  <span>📡</span> Connection
+                </div>
+                <div class="value" id="connectionStatus">Connected</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Stats Row -->
+      <div class="stats-row">
+        <div class="card stat-card">
+          <div class="stat-value" id="statReadings">0</div>
+          <div class="stat-label">Total Readings</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-value" id="statHighEvents">0</div>
+          <div class="stat-label">High Pressure Events</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-value" id="statAvgPressure">—</div>
+          <div class="stat-label">Avg Pressure (Session)</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-value" id="statUptime">0m</div>
+          <div class="stat-label">Session Uptime</div>
+        </div>
       </div>
     </div>
   </div>
@@ -172,30 +715,51 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
-      getFirestore, collection, query, orderBy, limit, onSnapshot
+      getFirestore, collection, query, orderBy, limit, onSnapshot, doc, getDoc
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    // ✅ paste your real config here
-const firebaseConfig = {
-  apiKey: "AIzaSyCXVRx1Rnf4by-uvbl0qofdqyU-4naj2rs",
-  authDomain: "cs-342-fdb46.firebaseapp.com",
-  projectId: "cs-342-fdb46",
-  storageBucket: "cs-342-fdb46.firebasestorage.app",
-  messagingSenderId: "144013980563",
-  appId: "1:144013980563:web:94e9a841047bad4537ee66",
-  measurementId: "G-3TM5VCZEKR"
-};
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyCXVRx1Rnf4by-uvbl0qofdqyU-4naj2rs",
+      authDomain: "cs-342-fdb46.firebaseapp.com",
+      projectId: "cs-342-fdb46",
+      storageBucket: "cs-342-fdb46.firebasestorage.app",
+      messagingSenderId: "144013980563",
+      appId: "1:144013980563:web:94e9a841047bad4537ee66",
+      measurementId: "G-3TM5VCZEKR"
+    };
 
-    // Set to "esp32-01" to filter client-side, or set to "" to show all devices.
+    // Configuration
     const DEVICE_FILTER = "esp32-01";
+    const PRESSURE_THRESHOLDS = {
+      low: 1000,
+      moderate: 2500
+    };
+    const SUSTAINED_THRESHOLD = 2500;
+    const SUSTAINED_TIME_ALERT = 30; // seconds
 
-    document.getElementById("devLabel").textContent = DEVICE_FILTER ? DEVICE_FILTER : "all";
+    // DEMO MODE - Set to true to simulate fake sensor data
+    const DEMO_MODE = true;
 
+    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    // DOM helpers
     const $ = (id) => document.getElementById(id);
 
+    // State
+    let sessionStart = Date.now();
+    let totalReadings = 0;
+    let highPressureEvents = 0;
+    let allPressureValues = [];
+    let sustainedStartTime = null;
+    let firstActivatedAt = null;
+
+    // Update device label
+    $("devLabel").textContent = DEVICE_FILTER || "all";
+
+    // Canvas setup
     const canvas = $("chart");
     const ctx = canvas.getContext("2d");
 
@@ -213,18 +777,23 @@ const firebaseConfig = {
       return { W: cssW, H: cssH };
     }
 
-    function draw(values) {
+    function draw(values, timestamps) {
       const { W, H } = resizeCanvas();
       ctx.clearRect(0, 0, W, H);
       if (!values || values.length < 2) return;
 
       let vMin = Math.min(...values);
       let vMax = Math.max(...values);
-      if (vMin === vMax) { vMin -= 1; vMax += 1; }
+      if (vMin === vMax) { vMin -= 100; vMax += 100; }
+      
+      // Add some padding to the range
+      const range = vMax - vMin;
+      vMin = Math.max(0, vMin - range * 0.1);
+      vMax = vMax + range * 0.1;
 
-      const pad = 18;
-      const topPad = 14;
-      const bottomPad = 20;
+      const pad = 20;
+      const topPad = 20;
+      const bottomPad = 30;
 
       const xFor = (i) => pad + (i / (values.length - 1)) * (W - pad * 2);
       const yFor = (v) => {
@@ -232,14 +801,49 @@ const firebaseConfig = {
         return (H - bottomPad) - t * (H - topPad - bottomPad);
       };
 
-      // grid
-      ctx.save();
-      ctx.globalAlpha = 0.30;
-      ctx.strokeStyle = "rgba(255,255,255,.16)";
-      ctx.lineWidth = 1;
+      // Draw threshold zones
+      const lowY = yFor(PRESSURE_THRESHOLDS.low);
+      const modY = yFor(PRESSURE_THRESHOLDS.moderate);
 
-      for (let k = 0; k <= 5; k++) {
-        const y = topPad + (k / 5) * (H - topPad - bottomPad);
+      // High zone (red)
+      ctx.fillStyle = "rgba(255,68,102,.08)";
+      ctx.fillRect(pad, topPad, W - pad * 2, modY - topPad);
+
+      // Moderate zone (yellow)
+      ctx.fillStyle = "rgba(255,204,0,.06)";
+      ctx.fillRect(pad, modY, W - pad * 2, lowY - modY);
+
+      // Low zone (green)
+      ctx.fillStyle = "rgba(0,255,204,.04)";
+      ctx.fillRect(pad, lowY, W - pad * 2, H - bottomPad - lowY);
+
+      // Draw threshold lines
+      ctx.setLineDash([5, 5]);
+      ctx.lineWidth = 1;
+      
+      // Low threshold line
+      ctx.strokeStyle = "rgba(0,255,204,.4)";
+      ctx.beginPath();
+      ctx.moveTo(pad, lowY);
+      ctx.lineTo(W - pad, lowY);
+      ctx.stroke();
+
+      // Moderate threshold line
+      ctx.strokeStyle = "rgba(255,204,0,.4)";
+      ctx.beginPath();
+      ctx.moveTo(pad, modY);
+      ctx.lineTo(W - pad, modY);
+      ctx.stroke();
+
+      ctx.setLineDash([]);
+
+      // Grid lines
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      ctx.strokeStyle = "rgba(255,255,255,.12)";
+      ctx.lineWidth = 1;
+      for (let k = 0; k <= 4; k++) {
+        const y = topPad + (k / 4) * (H - topPad - bottomPad);
         ctx.beginPath();
         ctx.moveTo(pad, y);
         ctx.lineTo(W - pad, y);
@@ -247,7 +851,7 @@ const firebaseConfig = {
       }
       ctx.restore();
 
-      // line path
+      // Draw the line
       ctx.beginPath();
       for (let i = 0; i < values.length; i++) {
         const x = xFor(i);
@@ -256,7 +860,7 @@ const firebaseConfig = {
         else ctx.lineTo(x, y);
       }
 
-      // glow
+      // Glow effect
       ctx.save();
       ctx.strokeStyle = "rgba(0,255,204,.35)";
       ctx.lineWidth = 6;
@@ -267,18 +871,143 @@ const firebaseConfig = {
       ctx.stroke();
       ctx.restore();
 
-      // main line
+      // Main line
       ctx.save();
-      ctx.strokeStyle = "rgba(255,255,255,.85)";
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = "rgba(255,255,255,.9)";
+      ctx.lineWidth = 2.5;
       ctx.lineJoin = "round";
       ctx.lineCap = "round";
       ctx.stroke();
       ctx.restore();
+
+      // Draw latest point
+      if (values.length > 0) {
+        const lastX = xFor(values.length - 1);
+        const lastY = yFor(values[values.length - 1]);
+        
+        ctx.beginPath();
+        ctx.arc(lastX, lastY, 6, 0, Math.PI * 2);
+        ctx.fillStyle = "var(--green)";
+        ctx.fill();
+        
+        ctx.beginPath();
+        ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+        ctx.fillStyle = "#fff";
+        ctx.fill();
+      }
+
+      // Y-axis labels
+      ctx.fillStyle = "rgba(255,255,255,.5)";
+      ctx.font = "11px system-ui";
+      ctx.textAlign = "right";
+      ctx.fillText(Math.round(vMax), pad - 5, topPad + 4);
+      ctx.fillText(Math.round(vMin), pad - 5, H - bottomPad);
     }
 
-    // ✅ This is the "working" style query: no where(), so no composite index needed.
-    // Pull a bigger window, then filter client-side and keep last 50 for the graph.
+    function getPressureLevel(raw) {
+      if (raw < PRESSURE_THRESHOLDS.low) return 'low';
+      if (raw < PRESSURE_THRESHOLDS.moderate) return 'moderate';
+      return 'high';
+    }
+
+    function updateThresholdBands(level) {
+      ['Low', 'Moderate', 'High'].forEach(band => {
+        const el = $(`band${band}`);
+        el.classList.toggle('active', band.toLowerCase() === level);
+      });
+    }
+
+    function updateConditionScore(values) {
+      if (!values.length) {
+        $("scoreValue").textContent = "—";
+        return;
+      }
+
+      const avg = values.reduce((a, b) => a + b, 0) / values.length;
+      const peak = Math.max(...values);
+      
+      // Simple scoring logic based on pressure
+      let score = 100;
+      
+      // Penalize based on average
+      if (avg > PRESSURE_THRESHOLDS.moderate) score -= 40;
+      else if (avg > PRESSURE_THRESHOLDS.low) score -= 20;
+      
+      // Penalize based on peak
+      if (peak > PRESSURE_THRESHOLDS.moderate) score -= 20;
+      else if (peak > PRESSURE_THRESHOLDS.low) score -= 10;
+      
+      // Penalize based on high pressure events
+      const highCount = values.filter(v => v > PRESSURE_THRESHOLDS.moderate).length;
+      score -= Math.min(30, highCount * 2);
+      
+      score = Math.max(0, Math.min(100, score));
+      
+      // Update display
+      $("scoreValue").textContent = Math.round(score);
+      
+      // Update ring
+      const circumference = 251.2;
+      const offset = circumference - (score / 100) * circumference;
+      const progress = $("scoreProgress");
+      progress.style.strokeDashoffset = offset;
+      
+      // Update color and label
+      const label = $("scoreLabel");
+      const driverPressure = $("driverPressure");
+      
+      if (score >= 70) {
+        progress.style.stroke = "var(--green)";
+        label.textContent = "Good";
+        label.className = "status-label good";
+        driverPressure.style.background = "var(--green)";
+      } else if (score >= 40) {
+        progress.style.stroke = "var(--yellow)";
+        label.textContent = "Watch";
+        label.className = "status-label watch";
+        driverPressure.style.background = "var(--yellow)";
+      } else {
+        progress.style.stroke = "var(--red)";
+        label.textContent = "Risk";
+        label.className = "status-label risk";
+        driverPressure.style.background = "var(--red)";
+      }
+    }
+
+    function updateSustainedLoad(raw) {
+      if (raw > SUSTAINED_THRESHOLD) {
+        if (!sustainedStartTime) {
+          sustainedStartTime = Date.now();
+        }
+        const elapsed = Math.floor((Date.now() - sustainedStartTime) / 1000);
+        $("sustainedTime").textContent = elapsed;
+        
+        if (elapsed >= SUSTAINED_TIME_ALERT) {
+          $("sustainedLoad").classList.add("visible");
+        }
+      } else {
+        sustainedStartTime = null;
+        $("sustainedLoad").classList.remove("visible");
+      }
+    }
+
+    function updateUptime() {
+      const elapsed = Math.floor((Date.now() - sessionStart) / 1000);
+      const minutes = Math.floor(elapsed / 60);
+      const hours = Math.floor(minutes / 60);
+      
+      if (hours > 0) {
+        $("statUptime").textContent = `${hours}h ${minutes % 60}m`;
+      } else {
+        $("statUptime").textContent = `${minutes}m`;
+      }
+    }
+
+    // Uptime updater
+    setInterval(updateUptime, 1000);
+
+    // Firebase query (skip if in demo mode)
+    if (!DEMO_MODE) {
     const q = query(
       collection(db, "readings"),
       orderBy("ts", "desc"),
@@ -287,6 +1016,8 @@ const firebaseConfig = {
 
     onSnapshot(q, (snap) => {
       $("err").textContent = "";
+      $("connectionStatus").textContent = "Connected";
+      $("connectionStatus").style.color = "var(--green)";
 
       const rowsAll = snap.docs.map(d => ({ id: d.id, ...d.data() }))
         .filter(r => r.ts && typeof r.raw !== "undefined");
@@ -295,33 +1026,238 @@ const firebaseConfig = {
         ? rowsAll.filter(r => r.deviceId === DEVICE_FILTER)
         : rowsAll;
 
-      const last50Newest = rows.slice(0, 50); // newest first
+      const last50Newest = rows.slice(0, 50);
       $("n").textContent = String(last50Newest.length);
+      totalReadings = rows.length;
+      $("statReadings").textContent = totalReadings;
 
       if (!last50Newest.length) {
         $("latestRaw").textContent = "—";
         $("latestZone").textContent = "—";
         $("updated").textContent = new Date().toLocaleTimeString();
+        $("deviceStatus").textContent = "No Data";
+        $("deviceStatus").style.color = "var(--yellow)";
         draw([]);
         return;
       }
 
       const latest = last50Newest[0];
-      $("latestRaw").textContent = latest.raw ?? "—";
+      const rawValue = Number(latest.raw ?? 0);
+      
+      // Update main display
+      $("latestRaw").textContent = rawValue;
       $("latestZone").textContent = latest.zone ?? "—";
-      $("updated").textContent =
-        latest.ts?.toDate?.().toLocaleTimeString?.() ?? new Date().toLocaleTimeString();
+      
+      // Convert to kPa (example conversion - adjust based on your sensor)
+      const kPa = (rawValue / 1000).toFixed(2);
+      $("pressureKpa").textContent = kPa;
+      
+      // Update timestamp
+      const timestamp = latest.ts?.toDate?.() ?? new Date();
+      $("updated").textContent = timestamp.toLocaleTimeString();
+      $("lastScanned").textContent = timestamp.toLocaleDateString();
+      
+      // Calculate days of use (from first reading)
+      if (rows.length > 0) {
+        const firstReading = rows[rows.length - 1];
+        const firstDate = firstReading.ts?.toDate?.() ?? new Date();
+        const daysDiff = Math.ceil((Date.now() - firstDate.getTime()) / (1000 * 60 * 60 * 24));
+        $("daysOfUse").textContent = daysDiff;
+      }
 
-      // plot oldest -> newest
+      // Get values for chart (oldest to newest)
       const values = last50Newest.slice().reverse().map(r => Number(r.raw ?? 0));
+      
+      // Calculate stats
+      const peak = Math.max(...values);
+      const avg = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+      $("peakValue").textContent = peak;
+      $("avgValue").textContent = avg;
+      $("statAvgPressure").textContent = avg;
+      
+      // Count high pressure events
+      highPressureEvents = values.filter(v => v > PRESSURE_THRESHOLDS.moderate).length;
+      $("statHighEvents").textContent = highPressureEvents;
+      
+      // Update threshold bands
+      const level = getPressureLevel(rawValue);
+      updateThresholdBands(level);
+      
+      // Update sustained load indicator
+      updateSustainedLoad(rawValue);
+      
+      // Update condition score
+      updateConditionScore(values);
+      
+      // Update device status
+      $("deviceStatus").textContent = "Active";
+      $("deviceStatus").style.color = "var(--green)";
+
+      // Draw chart
       draw(values);
+      
     }, (err) => {
       $("err").textContent = "Error: " + err.message;
+      $("connectionStatus").textContent = "Disconnected";
+      $("connectionStatus").style.color = "var(--red)";
       console.error(err);
     });
+    } // end if (!DEMO_MODE)
 
-    // redraw on resize
-    window.addEventListener("resize", () => {});
+    // Check for temperature data (stub - will be populated when sensor is connected)
+    async function checkTemperature() {
+      try {
+        // This is a placeholder - update with actual temperature collection when available
+        const tempDoc = await getDoc(doc(db, "devices", DEVICE_FILTER));
+        if (tempDoc.exists() && tempDoc.data().temperature) {
+          const temp = tempDoc.data().temperature;
+          $("tempValue").textContent = temp.toFixed(1);
+          $("tempPlaceholder").style.display = "none";
+          $("tempLastReading").textContent = new Date().toLocaleTimeString();
+        }
+      } catch (e) {
+        // Temperature not available yet
+      }
+    }
+
+    // Check temperature periodically (skip in demo mode)
+    if (!DEMO_MODE) {
+      checkTemperature();
+      setInterval(checkTemperature, 30000);
+    }
+
+    // Handle resize
+    window.addEventListener("resize", () => {
+      // Redraw will happen on next data update
+    });
+
+    // ============================================
+    // DEMO MODE - Simulate fake sensor data
+    // ============================================
+    if (DEMO_MODE) {
+      console.log("🎮 DEMO MODE ACTIVE - Simulating sensor data");
+      
+      let demoValues = [];
+      let demoReadingCount = 0;
+      let demoHighEvents = 0;
+      let demoBaseValue = 800;
+      let demoTrend = 1;
+      let demoTemperature = 36.5;
+      
+      // Initialize with some historical data
+      for (let i = 0; i < 30; i++) {
+        const noise = (Math.random() - 0.5) * 400;
+        const trend = Math.sin(i * 0.2) * 500;
+        demoValues.push(Math.max(100, demoBaseValue + trend + noise));
+      }
+      
+      function generateDemoReading() {
+        // Create realistic pressure patterns
+        demoReadingCount++;
+        
+        // Occasionally shift the baseline (simulates position changes)
+        if (Math.random() < 0.02) {
+          demoBaseValue = 500 + Math.random() * 2000;
+          demoTrend = Math.random() > 0.5 ? 1 : -1;
+        }
+        
+        // Add gradual drift
+        demoBaseValue += demoTrend * (Math.random() * 30);
+        if (demoBaseValue > 3500) demoTrend = -1;
+        if (demoBaseValue < 300) demoTrend = 1;
+        
+        // Add noise and occasional spikes
+        let noise = (Math.random() - 0.5) * 200;
+        if (Math.random() < 0.05) {
+          noise += (Math.random() > 0.5 ? 1 : -1) * 800; // Occasional spike
+        }
+        
+        const newValue = Math.max(50, Math.round(demoBaseValue + noise));
+        demoValues.push(newValue);
+        
+        // Keep last 50 values
+        if (demoValues.length > 50) {
+          demoValues.shift();
+        }
+        
+        // Count high pressure events
+        if (newValue > PRESSURE_THRESHOLDS.moderate) {
+          demoHighEvents++;
+        }
+        
+        // Simulate temperature (slight variations)
+        demoTemperature += (Math.random() - 0.5) * 0.1;
+        demoTemperature = Math.max(35.5, Math.min(38.5, demoTemperature));
+        
+        return newValue;
+      }
+      
+      function updateDemoDisplay() {
+        const rawValue = generateDemoReading();
+        const now = new Date();
+        
+        // Update main display
+        $("latestRaw").textContent = rawValue;
+        $("latestZone").textContent = rawValue > 2000 ? "center" : rawValue > 1000 ? "edge" : "off";
+        
+        // kPa conversion
+        const kPa = (rawValue / 1000).toFixed(2);
+        $("pressureKpa").textContent = kPa;
+        
+        // Timestamp
+        $("updated").textContent = now.toLocaleTimeString();
+        $("lastScanned").textContent = now.toLocaleDateString();
+        
+        // Stats
+        $("n").textContent = demoValues.length;
+        $("statReadings").textContent = demoReadingCount;
+        $("statHighEvents").textContent = demoHighEvents;
+        
+        const peak = Math.max(...demoValues);
+        const avg = Math.round(demoValues.reduce((a, b) => a + b, 0) / demoValues.length);
+        $("peakValue").textContent = peak;
+        $("avgValue").textContent = avg;
+        $("statAvgPressure").textContent = avg;
+        
+        // Days of use (simulate 5 days)
+        $("daysOfUse").textContent = "5";
+        
+        // Threshold bands
+        const level = getPressureLevel(rawValue);
+        updateThresholdBands(level);
+        
+        // Sustained load
+        updateSustainedLoad(rawValue);
+        
+        // Condition score
+        updateConditionScore(demoValues);
+        
+        // Temperature display
+        $("tempValue").textContent = demoTemperature.toFixed(1);
+        $("tempPlaceholder").style.display = "none";
+        $("tempLastReading").textContent = now.toLocaleTimeString();
+        
+        // Device status
+        $("deviceStatus").textContent = "Active";
+        $("deviceStatus").style.color = "var(--green)";
+        $("connectionStatus").textContent = "Demo Mode";
+        $("connectionStatus").style.color = "var(--blue)";
+        
+        // Draw chart
+        draw(demoValues);
+      }
+      
+      // Initial update
+      updateDemoDisplay();
+      
+      // Update every 500ms for smooth animation
+      setInterval(updateDemoDisplay, 500);
+      
+      // Show demo mode indicator
+      $("devLabel").textContent = "DEMO";
+      $("devLabel").style.background = "var(--blue-bg)";
+      $("devLabel").style.color = "var(--blue)";
+    }
   </script>
 </body>
 </html>
