@@ -241,7 +241,116 @@
         }
 
         .hidden {
-            display: none;
+            display: none !important;
+        }
+
+        /* Custom Modal for Reassignment Warning */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .modal-overlay.hidden {
+            display: none !important;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .modal-icon {
+            font-size: 48px;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #e67e22;
+        }
+
+        .modal-body {
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .modal-info {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .modal-info strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #856404;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .modal-button-cancel {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .modal-button-cancel:hover {
+            background: #7f8c8d;
+        }
+
+        .modal-button-confirm {
+            background: #e67e22;
+            color: white;
+        }
+
+        .modal-button-confirm:hover {
+            background: #d35400;
         }
 
         .instruction {
@@ -256,6 +365,36 @@
     </style>
 </head>
 <body>
+    <!-- Reassignment Warning Modal -->
+    <div id="reassignmentModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon">⚠️</div>
+                <div class="modal-title">Bag Already In Use</div>
+            </div>
+            <div class="modal-body">
+                <p>This bag is currently assigned to another patient.</p>
+                <div class="modal-info">
+                    <strong>Currently Assigned To:</strong>
+                    <div id="modalCurrentPatient"></div>
+                </div>
+                <div class="modal-info">
+                    <strong>You Scanned:</strong>
+                    <div id="modalNewPatient"></div>
+                </div>
+                <p><strong>Do you want to reassign this bag to the new patient?</strong></p>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-button modal-button-cancel" onclick="handleReassignmentResponse(false)">
+                    ✖ Cancel - Keep Current
+                </button>
+                <button class="modal-button modal-button-confirm" onclick="handleReassignmentResponse(true)">
+                    ✓ Confirm Reassignment
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div class="scanner-container">
         <div class="header">
             <h1>🏥 Hospital Scanner</h1>
@@ -425,6 +564,10 @@
 
             } else if (scanState === 'WAITING_FOR_BAG') {
                 // Second scan = Bag ID
+                console.log('=== BAG SCANNED ===');
+                console.log('Scanned bag ID:', code);
+                console.log('Current patient MRN:', patientMRN);
+                
                 bagID = code;
                 addToHistory('bag', bagID);
                 updateStatus('⏳', 'Checking...', 'Checking bag status');
@@ -436,6 +579,7 @@
                     }
 
                     // Find the bag in Medplum
+                    console.log('Looking up bag in Medplum...');
                     const deviceResponse = await fetch(
                         `${MEDPLUM_BASE_URL}/fhir/R4/Device?identifier=${bagID}`,
                         {
@@ -461,9 +605,10 @@
                     // Check if this bag is currently assigned (has active DeviceUseStatement)
                     let existingUseResponse;
                     try {
-                        // Get ALL DeviceUseStatements (don't filter by status in query - Medplum doesn't support it)
+                        // Get DeviceUseStatements for THIS specific bag, sorted by most recent first
+                        console.log('Querying for DeviceUseStatements for device ID:', deviceId);
                         existingUseResponse = await fetch(
-                            `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement`,
+                            `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement?device=Device/${deviceId}&_sort=-_lastUpdated&_count=10`,
                             {
                                 headers: {
                                     'Authorization': `Bearer ${accessToken}`,
@@ -471,6 +616,7 @@
                                 }
                             }
                         );
+                        console.log('Query response status:', existingUseResponse.status);
                     } catch (error) {
                         console.error('Failed to check bag status:', error);
                         throw error;
@@ -479,21 +625,28 @@
                     let existingAssignment = null;
                     if (existingUseResponse.ok) {
                         const existingUseData = await existingUseResponse.json();
+                        console.log('Got DeviceUseStatements for this bag, total entries:', existingUseData.entry ? existingUseData.entry.length : 0);
                         
-                        // Find if THIS bag has an ACTIVE assignment
+                        // Check if the MOST RECENT assignment (first in sorted list) is ACTIVE
                         if (existingUseData.entry && existingUseData.entry.length > 0) {
-                            for (const entry of existingUseData.entry) {
+                            console.log('=== CHECKING STATEMENTS FOR THIS BAG ===');
+                            for (let i = 0; i < existingUseData.entry.length; i++) {
+                                const entry = existingUseData.entry[i];
                                 const statement = entry.resource;
-                                const statementBagId = statement.device.display;
                                 const statementStatus = statement.status;
+                                const patientName = statement.subject ? statement.subject.display : 'Unknown';
                                 
-                                // Only check ACTIVE statements for THIS bag
-                                if (statementBagId === bagID && statementStatus === 'active') {
+                                console.log(`[${i}] Status="${statementStatus}" Patient="${patientName}"`);
+                                
+                                // Take the first ACTIVE one (should be most recent due to sorting)
+                                if (statementStatus === 'active') {
                                     existingAssignment = statement;
+                                    console.log(`✅ [${i}] FOUND ACTIVE ASSIGNMENT!`);
                                     break;
                                 }
                             }
                         }
+                        console.log('=== RESULT: existingAssignment =', existingAssignment ? 'FOUND' : 'NULL', '===');
                     }
 
                     // If bag is currently assigned, check if it's to a DIFFERENT patient
@@ -519,17 +672,22 @@
 
                             // Compare MRNs
                             if (existingMRN !== patientMRN) {
-                                // DIFFERENT PATIENT - Show warning!
+                                // DIFFERENT PATIENT - Show custom modal warning!
+                                console.log('🚨 DIFFERENT PATIENT DETECTED!');
+                                console.log('Existing MRN:', existingMRN);
+                                console.log('Scanned MRN:', patientMRN);
+                                
                                 updateStatus('⚠️', 'Warning', `${bagID} is in use by another patient`);
                                 
-                                const userConfirmed = confirm(
-                                    `⚠️ BAG IN USE\n\n` +
-                                    `${bagID} is currently assigned to:\n` +
-                                    `${existingPatientName} (${existingMRN})\n\n` +
-                                    `You scanned:\n` +
-                                    `${patientMRN}\n\n` +
-                                    `Do you want to REASSIGN this bag to the new patient?`
+                                // Show modal and wait for user response
+                                console.log('Showing modal...');
+                                const userConfirmed = await showReassignmentModal(
+                                    bagID,
+                                    existingPatientName,
+                                    existingMRN,
+                                    patientMRN
                                 );
+                                console.log('User response:', userConfirmed);
 
                                 if (!userConfirmed) {
                                     // User cancelled
@@ -550,6 +708,27 @@
                                     resetBtn.disabled = false;
                                     return;
                                 }
+                                
+                                // User confirmed - close out the existing assignment
+                                console.log('User confirmed - closing out existing assignment');
+                                existingAssignment.status = 'completed';
+                                if (!existingAssignment.timingPeriod) {
+                                    existingAssignment.timingPeriod = {};
+                                }
+                                existingAssignment.timingPeriod.end = new Date().toISOString();
+                                
+                                await fetch(
+                                    `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement/${existingAssignment.id}`,
+                                    {
+                                        method: 'PUT',
+                                        headers: {
+                                            'Authorization': `Bearer ${accessToken}`,
+                                            'Content-Type': 'application/fhir+json'
+                                        },
+                                        body: JSON.stringify(existingAssignment)
+                                    }
+                                );
+                                console.log('Closed out existing assignment');
                             }
                         }
                     }
@@ -675,47 +854,6 @@
                     }
                 }
 
-                // Close out any existing active assignment for this bag (if user confirmed reassignment)
-                const closeOutResponse = await fetch(
-                    `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement`,
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${accessToken}`,
-                            'Content-Type': 'application/fhir+json'
-                        }
-                    }
-                );
-
-                if (closeOutResponse.ok) {
-                    const closeOutData = await closeOutResponse.json();
-                    if (closeOutData.entry) {
-                        for (const entry of closeOutData.entry) {
-                            const statement = entry.resource;
-                            // Only close out ACTIVE statements for THIS bag
-                            if (statement.device.display === bagID && statement.status === 'active') {
-                                // Close it out
-                                statement.status = 'completed';
-                                if (!statement.timingPeriod) {
-                                    statement.timingPeriod = {};
-                                }
-                                statement.timingPeriod.end = new Date().toISOString();
-
-                                await fetch(
-                                    `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement/${statement.id}`,
-                                    {
-                                        method: 'PUT',
-                                        headers: {
-                                            'Authorization': `Bearer ${accessToken}`,
-                                            'Content-Type': 'application/fhir+json'
-                                        },
-                                        body: JSON.stringify(statement)
-                                    }
-                                );
-                            }
-                        }
-                    }
-                }
-
                 // Create NEW DeviceUseStatement for current patient
                 const deviceUseStatement = {
                     resourceType: 'DeviceUseStatement',
@@ -807,8 +945,12 @@
         }
 
         function resetScanner() {
-            if (scanner) {
-                scanner.stop();
+            if (scanner && scanner.getState && scanner.getState() !== 0) {
+                try {
+                    scanner.stop();
+                } catch (e) {
+                    console.log('Scanner already stopped');
+                }
             }
             
             document.getElementById('reader').classList.add('hidden');
@@ -819,15 +961,56 @@
             document.getElementById('manualInput').value = '';
             document.getElementById('scanHistory').innerHTML = '';
             
+            // Clear scan state
             patientMRN = null;
             bagID = null;
             scanState = 'WAITING_FOR_PATIENT';
+            lastScannedCode = null; // Clear duplicate prevention
+            lastScanTime = 0;
             
             updateStatus('📱', 'Ready to Scan', 'Scan patient bracelet to begin');
         }
 
+        // ===== CUSTOM MODAL FUNCTIONS =====
+        let modalResolve = null;
+
+        function showReassignmentModal(bagId, currentPatientName, currentMRN, newMRN) {
+            console.log('showReassignmentModal called with:', {bagId, currentPatientName, currentMRN, newMRN});
+            return new Promise((resolve) => {
+                modalResolve = resolve;
+                
+                // Fill in modal content
+                document.getElementById('modalCurrentPatient').innerHTML = `${currentPatientName} (${currentMRN})<br><strong>Bag: ${bagId}</strong>`;
+                document.getElementById('modalNewPatient').innerHTML = `MRN: ${newMRN}`;
+                
+                console.log('Modal content set, showing modal...');
+                // Show modal with slight delay to ensure it renders properly
+                setTimeout(() => {
+                    const modal = document.getElementById('reassignmentModal');
+                    console.log('Modal element:', modal);
+                    console.log('Modal classes before:', modal.className);
+                    modal.classList.remove('hidden');
+                    console.log('Modal classes after:', modal.className);
+                }, 100);
+            });
+        }
+
+        function handleReassignmentResponse(confirmed) {
+            // Hide modal
+            document.getElementById('reassignmentModal').classList.add('hidden');
+            
+            // Resolve the promise with user's choice
+            if (modalResolve) {
+                modalResolve(confirmed);
+                modalResolve = null;
+            }
+        }
+
         // Initialize on page load
         window.onload = async () => {
+            // Ensure modal is hidden on page load
+            document.getElementById('reassignmentModal').classList.add('hidden');
+            
             try {
                 await authenticate();
                 console.log('Authenticated successfully');
