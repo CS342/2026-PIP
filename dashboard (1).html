@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bag Fleet Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .bags-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .bag-card {
+            padding: 20px;
+            border-bottom: 1px solid #e1e4e8;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .bag-card:hover {
+            background: #f8f9fa;
+        }
+
+        .bag-card:last-child {
+            border-bottom: none;
+        }
+
+        .bag-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .bag-id {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .status-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-in-use {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-available {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-expired {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .bag-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 3px;
+        }
+
+        .info-value {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e1e4e8;
+            border-radius: 4px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            transition: width 0.3s;
+        }
+
+        .progress-good {
+            background: #28a745;
+        }
+
+        .progress-warning {
+            background: #ffc107;
+        }
+
+        .progress-danger {
+            background: #dc3545;
+        }
+
+        .bag-history {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e1e4e8;
+            display: none;
+        }
+
+        .bag-history.show {
+            display: block;
+        }
+
+        .history-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .history-item {
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            padding: 20px;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 5px;
+            color: #721c24;
+            margin: 20px;
+        }
+
+        .action-buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s;
+        }
+
+        .refresh-btn:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏥 Positioner Bag Fleet Dashboard</h1>
+        <p class="subtitle">Real-time monitoring of bag lifecycle and usage</p>
+        <div class="action-buttons">
+            <a href="scanner-app.html" class="btn btn-primary">📱 Scan New Assignment</a>
+            <button onclick="loadData()" class="btn btn-secondary">🔄 Refresh</button>
+        </div>
+    </div>
+
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-number" id="totalBags">-</div>
+            <div class="stat-label">Total Bags</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="inUseBags">-</div>
+            <div class="stat-label">Currently In Use</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="availableBags">-</div>
+            <div class="stat-label">Available</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="expiredBags">-</div>
+            <div class="stat-label">Expired</div>
+        </div>
+    </div>
+
+    <div class="bags-container">
+        <div id="bagsContent">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Loading bag data...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="refresh-btn" onclick="loadData()" title="Refresh data">
+        🔄
+    </div>
+
+    <script>
+        // ===== CONFIGURATION =====
+        const MEDPLUM_BASE_URL = 'https://api.medplum.com';
+        const MEDPLUM_CLIENT_ID = 'da02ae93-04f4-48a3-a32e-3e5a96fb5bd0';
+        const MEDPLUM_CLIENT_SECRET = '419ead2a73c4a53f5e6829168042db73c3dd8a1ecc6ed37640b1dc6ac1896bd6'; // Click the eye icon in Medplum to reveal and copy this
+        
+        let accessToken = null;
+
+        // ===== AUTHENTICATION =====
+        async function authenticate() {
+            const response = await fetch(`${MEDPLUM_BASE_URL}/oauth2/token`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    grant_type: 'client_credentials',
+                    client_id: MEDPLUM_CLIENT_ID,
+                    client_secret: MEDPLUM_CLIENT_SECRET
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Authentication failed');
+            }
+
+            const data = await response.json();
+            accessToken = data.access_token;
+            return accessToken;
+        }
+
+        // ===== CALCULATE DAYS SINCE OPENED =====
+        function calculateDaysSinceOpened(openedDateString) {
+            if (!openedDateString) return null;
+            
+            const openedDate = new Date(openedDateString);
+            const now = new Date();
+            const diffTime = Math.abs(now - openedDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays;
+        }
+
+        // ===== EXTRACT OPENED DATE FROM DEVICE =====
+        function getOpenedDate(device) {
+            console.log('Checking device:', device);
+            if (device.note && device.note.length > 0) {
+                const noteText = device.note[0].text;
+                console.log('Note text:', noteText);
+                // Updated regex to handle optional milliseconds: .123
+                const match = noteText.match(/(\d{4}-\d{2}-\d{2}T[\d:.]+Z)/);
+                console.log('Match result:', match);
+                if (match) {
+                    console.log('Extracted date:', match[1]);
+                    return match[1];
+                }
+            }
+            console.log('No date found');
+            return null;
+        }
+
+        // ===== LOAD DATA =====
+        async function loadData() {
+            const contentDiv = document.getElementById('bagsContent');
+            contentDiv.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading bag data...</p>
+                </div>
+            `;
+
+            try {
+                if (!accessToken) {
+                    await authenticate();
+                }
+
+                // Fetch all devices
+                const devicesResponse = await fetch(
+                    `${MEDPLUM_BASE_URL}/fhir/R4/Device`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/fhir+json'
+                        }
+                    }
+                );
+
+                if (!devicesResponse.ok) {
+                    throw new Error('Failed to fetch devices');
+                }
+
+                const devicesData = await devicesResponse.json();
+                const devices = devicesData.entry ? devicesData.entry.map(e => e.resource) : [];
+
+                // Fetch all DeviceUseStatements
+                const useStatementsResponse = await fetch(
+                    `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/fhir+json'
+                        }
+                    }
+                );
+
+                const useStatementsData = await useStatementsResponse.json();
+                const useStatements = useStatementsData.entry ? useStatementsData.entry.map(e => e.resource) : [];
+
+                // Process each device
+                const bagsHTML = devices.map(device => {
+                    const bagId = device.identifier ? device.identifier[0].value : device.id;
+                    const openedDate = getOpenedDate(device);
+                    const daysSinceOpened = openedDate ? calculateDaysSinceOpened(openedDate) : null;
+                    const daysRemaining = daysSinceOpened !== null ? 90 - daysSinceOpened : null;
+                    
+                    // Find current usage (active DeviceUseStatement) - get the MOST RECENT one
+                    const activeUseStatements = useStatements.filter(us => 
+                        us.device.reference.includes(device.id) && 
+                        us.status === 'active' &&
+                        (!us.timingPeriod || !us.timingPeriod.end)
+                    );
+                    
+                    // Sort by recordedOn to get the most recent
+                    const currentUse = activeUseStatements.length > 0 
+                        ? activeUseStatements.sort((a, b) => new Date(b.recordedOn) - new Date(a.recordedOn))[0]
+                        : null;
+
+                    // Find all usage history for this device
+                    const history = useStatements
+                        .filter(us => us.device.reference.includes(device.id))
+                        .sort((a, b) => new Date(b.recordedOn) - new Date(a.recordedOn));
+
+                    // Determine status
+                    let status = 'available';
+                    let statusClass = 'status-available';
+                    if (daysRemaining !== null && daysRemaining < 0) {
+                        status = 'expired';
+                        statusClass = 'status-expired';
+                    } else if (currentUse) {
+                        status = 'in-use';
+                        statusClass = 'status-in-use';
+                    }
+
+                    // Progress bar
+                    let progressPercent = daysSinceOpened !== null ? (daysSinceOpened / 90) * 100 : 0;
+                    progressPercent = Math.min(progressPercent, 100);
+                    let progressClass = 'progress-good';
+                    if (progressPercent > 75) progressClass = 'progress-danger';
+                    else if (progressPercent > 50) progressClass = 'progress-warning';
+
+                    // Current patient info
+                    let currentPatientHTML = '<span style="color: #999;">Not assigned</span>';
+                    if (currentUse && currentUse.subject) {
+                        currentPatientHTML = currentUse.subject.display || currentUse.subject.reference;
+                    }
+
+                    // Get latest sensor reading (if available)
+                    let sensorStatus = '<span style="color: #999;">No sensor data</span>';
+                    let sensorIcon = '❓';
+                    // We'll fetch this separately below
+                    
+                    // History HTML
+                    const historyHTML = history.length > 0 ? history.map(h => {
+                        const startDate = h.timingPeriod ? new Date(h.timingPeriod.start).toLocaleString() : 'Unknown';
+                        const endDate = h.timingPeriod && h.timingPeriod.end ? 
+                            new Date(h.timingPeriod.end).toLocaleString() : 
+                            '<strong>Currently in use</strong>';
+                        const patient = h.subject ? (h.subject.display || h.subject.reference) : 'Unknown';
+                        
+                        return `
+                            <div class="history-item">
+                                <strong>Patient:</strong> ${patient}<br>
+                                <strong>Start:</strong> ${startDate}<br>
+                                <strong>End:</strong> ${endDate}
+                            </div>
+                        `;
+                    }).join('') : '<div class="history-item">No usage history</div>';
+
+                    return `
+                        <div class="bag-card" onclick="toggleHistory('${device.id}')">
+                            <div class="bag-header">
+                                <div class="bag-id">📦 ${bagId}</div>
+                                <span class="status-badge ${statusClass}">${status.toUpperCase()}</span>
+                            </div>
+                            <div class="bag-info">
+                                <div class="info-item">
+                                    <span class="info-label">Days Since Opened</span>
+                                    <span class="info-value">${daysSinceOpened !== null ? daysSinceOpened : 'Unknown'}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Days Remaining</span>
+                                    <span class="info-value">${daysRemaining !== null ? Math.max(0, daysRemaining) : 'Unknown'}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Current Patient</span>
+                                    <span class="info-value">${currentPatientHTML}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Sensor Status</span>
+                                    <span class="info-value" id="sensor-${device.id}">${sensorIcon} ${sensorStatus}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Model</span>
+                                    <span class="info-value">${device.modelNumber || 'N/A'}</span>
+                                </div>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill ${progressClass}" style="width: ${progressPercent}%"></div>
+                            </div>
+                            <div class="bag-history" id="history-${device.id}">
+                                <div class="history-title">Usage History (${history.length} sessions)</div>
+                                ${historyHTML}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                contentDiv.innerHTML = bagsHTML || '<div class="loading"><p>No bags found</p></div>';
+
+                // Update stats
+                document.getElementById('totalBags').textContent = devices.length;
+                document.getElementById('inUseBags').textContent = devices.filter(d => {
+                    const currentUse = useStatements.find(us => 
+                        us.device.reference.includes(d.id) && 
+                        us.status === 'active' &&
+                        (!us.timingPeriod || !us.timingPeriod.end)
+                    );
+                    return currentUse !== undefined;
+                }).length;
+                
+                const expiredCount = devices.filter(d => {
+                    const openedDate = getOpenedDate(d);
+                    const days = openedDate ? calculateDaysSinceOpened(openedDate) : null;
+                    return days !== null && days > 90;
+                }).length;
+                
+                document.getElementById('expiredBags').textContent = expiredCount;
+                document.getElementById('availableBags').textContent = 
+                    devices.length - parseInt(document.getElementById('inUseBags').textContent) - expiredCount;
+
+                // Fetch sensor data for each device
+                devices.forEach(device => {
+                    fetchLatestSensorData(device.id);
+                });
+
+            } catch (error) {
+                contentDiv.innerHTML = `
+                    <div class="error">
+                        <strong>Error loading data:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function toggleHistory(deviceId) {
+            const historyDiv = document.getElementById(`history-${deviceId}`);
+            historyDiv.classList.toggle('show');
+        }
+
+        // ===== FETCH LATEST SENSOR DATA =====
+        async function fetchLatestSensorData(deviceId) {
+            try {
+                // Query for latest Observation for this device
+                // Use _lastUpdated for more reliable sorting
+                const response = await fetch(
+                    `${MEDPLUM_BASE_URL}/fhir/R4/Observation?subject=Device/${deviceId}&code=bag-occupancy&_sort=-_lastUpdated&_count=1`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/fhir+json'
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    console.error('Failed to fetch sensor data:', response.status);
+                    return;
+                }
+
+                const data = await response.json();
+                console.log('Sensor data for', deviceId, ':', data);
+                
+                if (data.entry && data.entry.length > 0) {
+                    const observation = data.entry[0].resource;
+                    const occupied = observation.valueBoolean;
+                    const timestamp = new Date(observation.effectiveDateTime);
+                    const timeAgo = getTimeAgo(timestamp);
+                    
+                    console.log('Device', deviceId, '- Occupied:', occupied, 'Time:', timeAgo);
+                    
+                    // Update the sensor status display
+                    const sensorElement = document.getElementById(`sensor-${deviceId}`);
+                    if (sensorElement) {
+                        if (occupied) {
+                            sensorElement.innerHTML = '🟢 <strong style="color: #27ae60;">OCCUPIED</strong><br><span style="font-size: 11px; color: #999;">' + timeAgo + '</span>';
+                        } else {
+                            sensorElement.innerHTML = '⚪ <strong style="color: #95a5a6;">NOT OCCUPIED</strong><br><span style="font-size: 11px; color: #999;">' + timeAgo + '</span>';
+                        }
+                    } else {
+                        console.error('Could not find sensor element for device:', deviceId);
+                    }
+                } else {
+                    console.log('No observations found for device:', deviceId);
+                }
+            } catch (error) {
+                console.error('Error fetching sensor data:', error);
+            }
+        }
+
+        // ===== CALCULATE TIME AGO =====
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            
+            if (seconds < 60) return `${seconds}s ago`;
+            if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+            if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+            return `${Math.floor(seconds / 86400)}d ago`;
+        }
+
+        // Initialize on page load
+        window.onload = async () => {
+            try {
+                await authenticate();
+                await loadData();
+                
+                // Auto-refresh every 5 seconds (faster for real-time sensor updates)
+                setInterval(loadData, 5000);
+            } catch (error) {
+                document.getElementById('bagsContent').innerHTML = `
+                    <div class="error">
+                        <h3>Configuration Error</h3>
+                        <p>Please update MEDPLUM_CLIENT_ID and MEDPLUM_CLIENT_SECRET in the code.</p>
+                    </div>
+                `;
+            }
+        };
+    </script>
+</body>
+</html>

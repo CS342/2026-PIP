@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Scanner Simulator</title>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .scanner-container {
+            max-width: 500px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .scanner-status {
+            padding: 20px;
+            background: #ecf0f1;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .status-indicator {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .status-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .status-subtext {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+
+        .scan-history {
+            margin-bottom: 20px;
+        }
+
+        .scan-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #3498db;
+        }
+
+        .scan-item.patient {
+            border-left-color: #9b59b6;
+        }
+
+        .scan-item.bag {
+            border-left-color: #e74c3c;
+        }
+
+        .scan-item.complete {
+            border-left-color: #27ae60;
+            background: #d4edda;
+        }
+
+        .scan-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .scan-value {
+            font-size: 16px;
+            color: #2c3e50;
+            font-weight: 600;
+            margin-top: 3px;
+        }
+
+        .scan-time {
+            font-size: 11px;
+            color: #95a5a6;
+            margin-top: 3px;
+        }
+
+        #reader {
+            margin: 20px 0;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 3px solid #3498db;
+        }
+
+        .button {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+
+        .button-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .button-primary:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+        }
+
+        .button-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .button-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .manual-input-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #ecf0f1;
+        }
+
+        .manual-input-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .manual-input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .button-small {
+            padding: 10px 20px;
+            font-size: 14px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .success-message {
+            padding: 15px;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            color: #155724;
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .error-message {
+            padding: 15px;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            color: #721c24;
+            margin-top: 15px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .instruction {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="scanner-container">
+        <div class="header">
+            <h1>🏥 Hospital Scanner</h1>
+            <p class="subtitle">Scan patient bracelet, then bag barcode</p>
+        </div>
+
+        <div class="instruction">
+            <strong>Workflow:</strong> First scan patient MRN → Then scan bag ID → System auto-assigns
+        </div>
+
+        <div class="scanner-status">
+            <div class="status-indicator" id="statusIcon">📱</div>
+            <div class="status-text" id="statusText">Ready to Scan</div>
+            <div class="status-subtext" id="statusSubtext">Scan patient bracelet to begin</div>
+        </div>
+
+        <div id="reader" class="hidden"></div>
+
+        <button id="scanBtn" class="button button-primary" onclick="startScanning()">
+            📷 Start Scanner
+        </button>
+
+        <button id="resetBtn" class="button button-secondary hidden" onclick="resetScanner()">
+            🔄 Reset / Start Over
+        </button>
+
+        <div class="manual-input-section">
+            <div class="manual-input-label">Or enter manually:</div>
+            <div class="manual-input-group">
+                <input type="text" id="manualInput" placeholder="Scan code or enter here...">
+                <button class="button button-primary button-small" onclick="manualScan()">Submit</button>
+            </div>
+        </div>
+
+        <div class="scan-history">
+            <div id="scanHistory"></div>
+        </div>
+
+        <div id="resultMessage"></div>
+    </div>
+
+    <script>
+        // ===== CONFIGURATION =====
+        const MEDPLUM_BASE_URL = 'https://api.medplum.com';
+        const MEDPLUM_CLIENT_ID = 'da02ae93-04f4-48a3-a32e-3e5a96fb5bd0';
+        const MEDPLUM_CLIENT_SECRET = '419ead2a73c4a53f5e6829168042db73c3dd8a1ecc6ed37640b1dc6ac1896bd6'; // Click the eye icon in Medplum to reveal and copy this
+        
+        let accessToken = null;
+        let scanner = null;
+        let scanState = 'WAITING_FOR_PATIENT'; // WAITING_FOR_PATIENT, WAITING_FOR_BAG, PROCESSING
+        let patientMRN = null;
+        let bagID = null;
+        let scanHistory = [];
+        let lastScanTime = 0;
+        let lastScannedCode = '';
+        const SCAN_COOLDOWN = 2000; // 2 seconds between scans
+
+        // ===== AUTHENTICATION =====
+        async function authenticate() {
+            const response = await fetch(`${MEDPLUM_BASE_URL}/oauth2/token`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    grant_type: 'client_credentials',
+                    client_id: MEDPLUM_CLIENT_ID,
+                    client_secret: MEDPLUM_CLIENT_SECRET
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Authentication failed');
+            }
+
+            const data = await response.json();
+            accessToken = data.access_token;
+            return accessToken;
+        }
+
+        // ===== UI UPDATES =====
+        function updateStatus(icon, text, subtext) {
+            document.getElementById('statusIcon').textContent = icon;
+            document.getElementById('statusText').textContent = text;
+            document.getElementById('statusSubtext').textContent = subtext;
+        }
+
+        function addToHistory(type, value) {
+            const time = new Date().toLocaleTimeString();
+            const historyDiv = document.getElementById('scanHistory');
+            
+            let label = '';
+            let icon = '';
+            if (type === 'patient') {
+                label = 'Patient MRN';
+                icon = '👤';
+            } else if (type === 'bag') {
+                label = 'Bag ID';
+                icon = '📦';
+            } else if (type === 'complete') {
+                label = 'Assignment Complete';
+                icon = '✅';
+            }
+
+            const scanItem = document.createElement('div');
+            scanItem.className = `scan-item ${type}`;
+            scanItem.innerHTML = `
+                <div class="scan-label">${icon} ${label}</div>
+                <div class="scan-value">${value}</div>
+                <div class="scan-time">${time}</div>
+            `;
+            
+            historyDiv.insertBefore(scanItem, historyDiv.firstChild);
+            scanHistory.push({ type, value, time });
+        }
+
+        // ===== SCANNING =====
+        function startScanning() {
+            const readerDiv = document.getElementById('reader');
+            readerDiv.classList.remove('hidden');
+            document.getElementById('scanBtn').disabled = true;
+            document.getElementById('resetBtn').classList.remove('hidden');
+
+            scanner = new Html5Qrcode("reader");
+            scanner.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: 250 },
+                onScanSuccess,
+                onScanError
+            );
+        }
+
+        function onScanSuccess(decodedText) {
+            processScannedCode(decodedText);
+        }
+
+        function onScanError(error) {
+            // Ignore continuous scan errors
+        }
+
+        function manualScan() {
+            const input = document.getElementById('manualInput');
+            const value = input.value.trim();
+            if (value) {
+                processScannedCode(value);
+                input.value = '';
+            }
+        }
+
+        async function processScannedCode(code) {
+            // Prevent duplicate scans
+            const now = Date.now();
+            if (code === lastScannedCode && (now - lastScanTime) < SCAN_COOLDOWN) {
+                console.log('Ignoring duplicate scan');
+                return;
+            }
+            
+            lastScannedCode = code;
+            lastScanTime = now;
+
+            if (scanState === 'WAITING_FOR_PATIENT') {
+                // First scan = Patient MRN
+                patientMRN = code;
+                addToHistory('patient', patientMRN);
+                updateStatus('📦', 'Scan Bag', 'Now scan the bag barcode');
+                scanState = 'WAITING_FOR_BAG';
+
+            } else if (scanState === 'WAITING_FOR_BAG') {
+                // Second scan = Bag ID
+                bagID = code;
+                addToHistory('bag', bagID);
+                updateStatus('⏳', 'Processing...', 'Creating assignment in Medplum');
+                scanState = 'PROCESSING';
+
+                // Stop scanner
+                if (scanner) {
+                    scanner.stop();
+                    document.getElementById('reader').classList.add('hidden');
+                }
+
+                // Process assignment
+                await assignBagToPatient();
+            }
+        }
+
+        // ===== ASSIGN BAG TO PATIENT =====
+        async function assignBagToPatient() {
+            const resultDiv = document.getElementById('resultMessage');
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>Assigning bag to patient...</p></div>';
+
+            try {
+                if (!accessToken) {
+                    await authenticate();
+                }
+
+                // Find patient by MRN
+                const patientResponse = await fetch(
+                    `${MEDPLUM_BASE_URL}/fhir/R4/Patient?identifier=${patientMRN}`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/fhir+json'
+                        }
+                    }
+                );
+
+                if (!patientResponse.ok) {
+                    throw new Error('Failed to find patient');
+                }
+
+                const patientData = await patientResponse.json();
+                if (!patientData.entry || patientData.entry.length === 0) {
+                    throw new Error(`Patient with MRN ${patientMRN} not found`);
+                }
+
+                const patient = patientData.entry[0].resource;
+                const patientId = patient.id;
+                const patientName = patient.name ? `${patient.name[0].given[0]} ${patient.name[0].family}` : patientMRN;
+
+                // Find device (bag) by identifier
+                const deviceResponse = await fetch(
+                    `${MEDPLUM_BASE_URL}/fhir/R4/Device?identifier=${bagID}`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/fhir+json'
+                        }
+                    }
+                );
+
+                if (!deviceResponse.ok) {
+                    throw new Error('Failed to find bag');
+                }
+
+                const deviceData = await deviceResponse.json();
+                if (!deviceData.entry || deviceData.entry.length === 0) {
+                    throw new Error(`Bag ${bagID} not found`);
+                }
+
+                const device = deviceData.entry[0].resource;
+                const deviceId = device.id;
+
+                // Check if this is first use (no opened date)
+                let isFirstUse = true;
+                let openedDate = null;
+
+                if (device.note && device.note.length > 0) {
+                    const noteText = device.note[0].text;
+                    const match = noteText.match(/Package opened: (\d{4}-\d{2}-\d{2}T[\d:]+Z)/);
+                    if (match) {
+                        isFirstUse = false;
+                        openedDate = match[1];
+                    }
+                }
+
+                // If first use, update device with opened date
+                if (isFirstUse) {
+                    openedDate = new Date().toISOString();
+                    device.note = [{
+                        text: `Package opened: ${openedDate}`
+                    }];
+
+                    const updateResponse = await fetch(
+                        `${MEDPLUM_BASE_URL}/fhir/R4/Device/${deviceId}`,
+                        {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `Bearer ${accessToken}`,
+                                'Content-Type': 'application/fhir+json'
+                            },
+                            body: JSON.stringify(device)
+                        }
+                    );
+
+                    if (!updateResponse.ok) {
+                        throw new Error('Failed to update device with opened date');
+                    }
+                }
+
+                // ===== CHECK FOR EXISTING ACTIVE ASSIGNMENT =====
+                // Close out any existing active DeviceUseStatements for this bag
+                const existingUseResponse = await fetch(
+                    `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement?device=Device/${deviceId}&status=active`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/fhir+json'
+                        }
+                    }
+                );
+
+                if (existingUseResponse.ok) {
+                    const existingUseData = await existingUseResponse.json();
+                    if (existingUseData.entry && existingUseData.entry.length > 0) {
+                        // Close out all existing active assignments for this bag
+                        for (const entry of existingUseData.entry) {
+                            const existingStatement = entry.resource;
+                            
+                            // Update it to completed
+                            existingStatement.status = 'completed';
+                            if (!existingStatement.timingPeriod) {
+                                existingStatement.timingPeriod = {};
+                            }
+                            existingStatement.timingPeriod.end = new Date().toISOString();
+
+                            await fetch(
+                                `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement/${existingStatement.id}`,
+                                {
+                                    method: 'PUT',
+                                    headers: {
+                                        'Authorization': `Bearer ${accessToken}`,
+                                        'Content-Type': 'application/fhir+json'
+                                    },
+                                    body: JSON.stringify(existingStatement)
+                                }
+                            );
+                        }
+                    }
+                }
+
+                // Create NEW DeviceUseStatement for current patient
+                const deviceUseStatement = {
+                    resourceType: 'DeviceUseStatement',
+                    status: 'active',
+                    subject: {
+                        reference: `Patient/${patientId}`,
+                        display: patientName
+                    },
+                    device: {
+                        reference: `Device/${deviceId}`,
+                        display: bagID
+                    },
+                    recordedOn: new Date().toISOString(),
+                    timingPeriod: {
+                        start: new Date().toISOString()
+                    }
+                };
+
+                const createResponse = await fetch(
+                    `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/fhir+json'
+                        },
+                        body: JSON.stringify(deviceUseStatement)
+                    }
+                );
+
+                if (!createResponse.ok) {
+                    throw new Error('Failed to create assignment');
+                }
+
+                // Success!
+                updateStatus('✅', 'Success!', 'Assignment complete');
+                addToHistory('complete', `${bagID} → ${patientName}`);
+
+                let message = `<strong>${bagID}</strong> assigned to <strong>${patientName}</strong>`;
+                if (isFirstUse) {
+                    message += '<br><br>🎉 <strong>Package opened! 90-day timer started.</strong>';
+                }
+
+                resultDiv.innerHTML = `
+                    <div class="success-message">
+                        ${message}
+                        <br><br>
+                        <a href="dashboard.html" style="color: #155724; font-weight: 600;">View Dashboard →</a>
+                    </div>
+                `;
+
+                // Auto-reset after 3 seconds
+                setTimeout(() => {
+                    resetScanner();
+                }, 5000);
+
+            } catch (error) {
+                updateStatus('❌', 'Error', error.message);
+                resultDiv.innerHTML = `
+                    <div class="error-message">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+                
+                // Allow reset
+                scanState = 'WAITING_FOR_PATIENT';
+            }
+        }
+
+        function resetScanner() {
+            if (scanner) {
+                scanner.stop();
+            }
+            
+            document.getElementById('reader').classList.add('hidden');
+            document.getElementById('scanBtn').disabled = false;
+            document.getElementById('resetBtn').classList.add('hidden');
+            document.getElementById('resultMessage').innerHTML = '';
+            document.getElementById('manualInput').value = '';
+            
+            patientMRN = null;
+            bagID = null;
+            scanState = 'WAITING_FOR_PATIENT';
+            
+            updateStatus('📱', 'Ready to Scan', 'Scan patient bracelet to begin');
+        }
+
+        // Initialize on page load
+        window.onload = async () => {
+            try {
+                await authenticate();
+                console.log('Authenticated successfully');
+            } catch (error) {
+                console.error('Authentication failed:', error);
+                document.querySelector('.scanner-container').innerHTML = `
+                    <div class="error-message">
+                        <h3>Configuration Error</h3>
+                        <p>Please update MEDPLUM_CLIENT_ID and MEDPLUM_CLIENT_SECRET in the code.</p>
+                    </div>
+                `;
+            }
+        };
+
+        // Allow Enter key for manual input
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('manualInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    manualScan();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

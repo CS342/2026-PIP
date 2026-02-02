@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital EHR - Device Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #f0f2f5;
+            color: #1a1a1a;
+        }
+
+        /* EHR-style header */
+        .ehr-header {
+            background: #0066cc;
+            color: white;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .ehr-logo {
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .ehr-user {
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Navigation tabs */
+        .ehr-tabs {
+            background: white;
+            padding: 0 24px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            gap: 4px;
+        }
+
+        .ehr-tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            color: #666;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .ehr-tab:hover {
+            background: #f5f5f5;
+        }
+
+        .ehr-tab.active {
+            color: #0066cc;
+            border-bottom-color: #0066cc;
+            font-weight: 600;
+        }
+
+        /* Main container */
+        .ehr-container {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 24px;
+        }
+
+        /* Breadcrumb */
+        .ehr-breadcrumb {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 16px;
+        }
+
+        /* Content card */
+        .ehr-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .ehr-card-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid #e5e5e5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ehr-card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .ehr-card-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .ehr-btn {
+            padding: 6px 14px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .ehr-btn:hover {
+            background: #f5f5f5;
+        }
+
+        .ehr-btn-primary {
+            background: #0066cc;
+            color: white;
+            border-color: #0066cc;
+        }
+
+        .ehr-btn-primary:hover {
+            background: #0052a3;
+        }
+
+        /* Table */
+        .ehr-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .ehr-table th {
+            text-align: left;
+            padding: 12px 24px;
+            background: #f9fafb;
+            font-size: 12px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        .ehr-table td {
+            padding: 16px 24px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+
+        .ehr-table tr:hover {
+            background: #f9fafb;
+        }
+
+        .ehr-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Status badges */
+        .ehr-status {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .ehr-status.in-use {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .ehr-status.available {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .ehr-status.expired {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .ehr-status.occupied {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .ehr-status.not-occupied {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+
+        /* Detail view */
+        .ehr-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            padding: 24px;
+        }
+
+        .ehr-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .ehr-field-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .ehr-field-value {
+            font-size: 14px;
+            color: #1a1a1a;
+        }
+
+        /* Progress indicator */
+        .ehr-progress {
+            width: 100%;
+            height: 6px;
+            background: #e5e5e5;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+
+        .ehr-progress-bar {
+            height: 100%;
+            transition: width 0.3s;
+        }
+
+        .ehr-progress-bar.good {
+            background: #22c55e;
+        }
+
+        .ehr-progress-bar.warning {
+            background: #f59e0b;
+        }
+
+        .ehr-progress-bar.danger {
+            background: #ef4444;
+        }
+
+        /* Loading */
+        .ehr-loading {
+            text-align: center;
+            padding: 60px;
+            color: #6b7280;
+        }
+
+        .ehr-spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #0066cc;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Alert banner */
+        .ehr-alert {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 12px 20px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .ehr-alert-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .ehr-alert-text {
+            font-size: 13px;
+            color: #78716c;
+        }
+    </style>
+</head>
+<body>
+    <!-- EHR Header -->
+    <div class="ehr-header">
+        <div class="ehr-logo">
+            <span>🏥</span>
+            <span>Hospital EHR System</span>
+        </div>
+        <div class="ehr-user">
+            <span>👤 Nurse Station 4B</span>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="ehr-tabs">
+        <div class="ehr-tab">Patients</div>
+        <div class="ehr-tab">Orders</div>
+        <div class="ehr-tab active">Devices</div>
+        <div class="ehr-tab">Results</div>
+        <div class="ehr-tab">Documentation</div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="ehr-container">
+        <div class="ehr-breadcrumb">
+            Home > Device Management > Positioner Bags
+        </div>
+
+        <!-- Alert for expiring bags -->
+        <div id="alertSection"></div>
+
+        <!-- Device List Card -->
+        <div class="ehr-card">
+            <div class="ehr-card-header">
+                <div class="ehr-card-title">Positioner Bag Inventory</div>
+                <div class="ehr-card-actions">
+                    <button class="ehr-btn" onclick="loadData()">🔄 Refresh</button>
+                    <button class="ehr-btn ehr-btn-primary" onclick="window.location.href='hospital-scanner.html'">+ New Assignment</button>
+                </div>
+            </div>
+            <div id="deviceTable">
+                <div class="ehr-loading">
+                    <div class="ehr-spinner"></div>
+                    <p>Loading device data from FHIR server...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Device Detail Card (hidden by default) -->
+        <div class="ehr-card" id="deviceDetail" style="display: none;">
+            <div class="ehr-card-header">
+                <div class="ehr-card-title" id="detailTitle">Device Details</div>
+                <div class="ehr-card-actions">
+                    <button class="ehr-btn" onclick="hideDetail()">✕ Close</button>
+                </div>
+            </div>
+            <div id="detailContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // ===== CONFIGURATION =====
+        const MEDPLUM_BASE_URL = 'https://api.medplum.com';
+        const MEDPLUM_CLIENT_ID = 'da02ae93-04f4-48a3-a32e-3e5a96fb5bd0';
+        const MEDPLUM_CLIENT_SECRET = '419ead2a73c4a53f5e6829168042db73c3dd8a1ecc6ed37640b1dc6ac1896bd6';
+        
+        let accessToken = null;
+
+        // ===== AUTHENTICATION =====
+        async function authenticate() {
+            const response = await fetch(`${MEDPLUM_BASE_URL}/oauth2/token`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    grant_type: 'client_credentials',
+                    client_id: MEDPLUM_CLIENT_ID,
+                    client_secret: MEDPLUM_CLIENT_SECRET
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Authentication failed');
+            }
+
+            const data = await response.json();
+            accessToken = data.access_token;
+            return accessToken;
+        }
+
+        // ===== CALCULATE DAYS SINCE OPENED =====
+        function calculateDaysSinceOpened(openedDateString) {
+            if (!openedDateString) return null;
+            
+            const openedDate = new Date(openedDateString);
+            const now = new Date();
+            const diffTime = Math.abs(now - openedDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays;
+        }
+
+        // ===== EXTRACT OPENED DATE FROM DEVICE =====
+        function getOpenedDate(device) {
+            if (device.note && device.note.length > 0) {
+                const noteText = device.note[0].text;
+                const match = noteText.match(/(\d{4}-\d{2}-\d{2}T[\d:.]+Z)/);
+                if (match) {
+                    return match[1];
+                }
+            }
+            return null;
+        }
+
+        // ===== LOAD DATA =====
+        async function loadData() {
+            const tableDiv = document.getElementById('deviceTable');
+            tableDiv.innerHTML = `
+                <div class="ehr-loading">
+                    <div class="ehr-spinner"></div>
+                    <p>Loading device data from FHIR server...</p>
+                </div>
+            `;
+
+            try {
+                if (!accessToken) {
+                    await authenticate();
+                }
+
+                // Fetch devices
+                const devicesResponse = await fetch(
+                    `${MEDPLUM_BASE_URL}/fhir/R4/Device`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/fhir+json'
+                        }
+                    }
+                );
+
+                const devicesData = await devicesResponse.json();
+                const devices = devicesData.entry ? devicesData.entry.map(e => e.resource) : [];
+
+                // Fetch DeviceUseStatements
+                const useStatementsResponse = await fetch(
+                    `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/fhir+json'
+                        }
+                    }
+                );
+
+                const useStatementsData = await useStatementsResponse.json();
+                const useStatements = useStatementsData.entry ? useStatementsData.entry.map(e => e.resource) : [];
+
+                // Check for expiring bags
+                const expiringBags = devices.filter(d => {
+                    const openedDate = getOpenedDate(d);
+                    const days = openedDate ? calculateDaysSinceOpened(openedDate) : null;
+                    return days !== null && days > 80 && days <= 90;
+                });
+
+                if (expiringBags.length > 0) {
+                    document.getElementById('alertSection').innerHTML = `
+                        <div class="ehr-alert">
+                            <div class="ehr-alert-title">⚠️ Alert: ${expiringBags.length} bag(s) nearing expiration</div>
+                            <div class="ehr-alert-text">Review and replace bags that are approaching their 90-day lifecycle limit.</div>
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('alertSection').innerHTML = '';
+                }
+
+                // Build table
+                let tableHTML = '<table class="ehr-table"><thead><tr>';
+                tableHTML += '<th>Device ID</th>';
+                tableHTML += '<th>Status</th>';
+                tableHTML += '<th>Current Patient</th>';
+                tableHTML += '<th>Days Open / Remaining</th>';
+                tableHTML += '<th>Sensor Status</th>';
+                tableHTML += '<th>Actions</th>';
+                tableHTML += '</tr></thead><tbody>';
+
+                // Process each device and fetch its latest sensor reading
+                for (const device of devices) {
+                    const bagId = device.identifier ? device.identifier[0].value : device.id;
+                    const openedDate = getOpenedDate(device);
+                    const daysSinceOpened = openedDate ? calculateDaysSinceOpened(openedDate) : null;
+                    const daysRemaining = daysSinceOpened !== null ? 90 - daysSinceOpened : null;
+
+                    // Find current use - get the MOST RECENT active one
+                    const activeUseStatements = useStatements.filter(us => 
+                        us.device.reference.includes(device.id) && 
+                        us.status === 'active' &&
+                        (!us.timingPeriod || !us.timingPeriod.end)
+                    );
+                    
+                    const currentUse = activeUseStatements.length > 0 
+                        ? activeUseStatements.sort((a, b) => new Date(b.recordedOn) - new Date(a.recordedOn))[0]
+                        : null;
+
+                    // Status
+                    let status = 'available';
+                    let statusClass = 'available';
+                    if (daysRemaining !== null && daysRemaining < 0) {
+                        status = 'expired';
+                        statusClass = 'expired';
+                    } else if (currentUse) {
+                        status = 'in-use';
+                        statusClass = 'in-use';
+                    }
+
+                    // Current patient
+                    let patientName = '<span style="color: #999;">—</span>';
+                    if (currentUse && currentUse.subject) {
+                        patientName = currentUse.subject.display || 'Patient';
+                    }
+
+                    // Days info
+                    let daysInfo = '<span style="color: #999;">Unknown</span>';
+                    if (daysSinceOpened !== null && daysRemaining !== null) {
+                        daysInfo = `${daysSinceOpened} / ${Math.max(0, daysRemaining)}`;
+                    }
+
+                    // Fetch latest sensor reading for THIS device
+                    let sensorHTML = '<span style="color: #999;">No data</span>';
+                    try {
+                        const obsResponse = await fetch(
+                            `${MEDPLUM_BASE_URL}/fhir/R4/Observation?subject=Device/${device.id}&code=bag-occupancy&_sort=-_lastUpdated&_count=1`,
+                            {
+                                headers: {
+                                    'Authorization': `Bearer ${accessToken}`,
+                                    'Content-Type': 'application/fhir+json'
+                                }
+                            }
+                        );
+                        
+                        if (obsResponse.ok) {
+                            const obsData = await obsResponse.json();
+                            if (obsData.entry && obsData.entry.length > 0) {
+                                const latestObs = obsData.entry[0].resource;
+                                if (latestObs.valueBoolean) {
+                                    sensorHTML = '<span class="ehr-status occupied">🟢 Occupied</span>';
+                                } else {
+                                    sensorHTML = '<span class="ehr-status not-occupied">⚪ Not Occupied</span>';
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error fetching sensor data for', device.id, error);
+                    }
+
+                    tableHTML += '<tr>';
+                    tableHTML += `<td><strong>${bagId}</strong></td>`;
+                    tableHTML += `<td><span class="ehr-status ${statusClass}">${status}</span></td>`;
+                    tableHTML += `<td>${patientName}</td>`;
+                    tableHTML += `<td>${daysInfo}</td>`;
+                    tableHTML += `<td>${sensorHTML}</td>`;
+                    tableHTML += `<td><button class="ehr-btn" onclick='showDetail(${JSON.stringify(device.id)})'>View Details</button></td>`;
+                    tableHTML += '</tr>';
+                }
+
+                tableHTML += '</tbody></table>';
+                tableDiv.innerHTML = tableHTML;
+
+            } catch (error) {
+                tableDiv.innerHTML = `
+                    <div style="padding: 40px; text-align: center; color: #dc2626;">
+                        <strong>Error loading data:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // ===== SHOW DEVICE DETAIL =====
+        async function showDetail(deviceId) {
+            document.getElementById('deviceDetail').style.display = 'block';
+            document.getElementById('detailContent').innerHTML = `
+                <div class="ehr-loading">
+                    <div class="ehr-spinner"></div>
+                    <p>Loading device details...</p>
+                </div>
+            `;
+
+            // Fetch device
+            const deviceResponse = await fetch(
+                `${MEDPLUM_BASE_URL}/fhir/R4/Device/${deviceId}`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/fhir+json'
+                    }
+                }
+            );
+
+            const device = await deviceResponse.json();
+            const bagId = device.identifier ? device.identifier[0].value : device.id;
+            const openedDate = getOpenedDate(device);
+            const daysSinceOpened = openedDate ? calculateDaysSinceOpened(openedDate) : null;
+            const daysRemaining = daysSinceOpened !== null ? 90 - daysSinceOpened : null;
+
+            document.getElementById('detailTitle').textContent = `Device: ${bagId}`;
+
+            let progressHTML = '';
+            if (daysSinceOpened !== null) {
+                const percent = Math.min((daysSinceOpened / 90) * 100, 100);
+                const colorClass = percent > 75 ? 'danger' : percent > 50 ? 'warning' : 'good';
+                progressHTML = `
+                    <div class="ehr-progress">
+                        <div class="ehr-progress-bar ${colorClass}" style="width: ${percent}%"></div>
+                    </div>
+                `;
+            }
+
+            let detailHTML = '<div class="ehr-detail-grid">';
+            detailHTML += `
+                <div class="ehr-field">
+                    <div class="ehr-field-label">Device Identifier</div>
+                    <div class="ehr-field-value">${bagId}</div>
+                </div>
+                <div class="ehr-field">
+                    <div class="ehr-field-label">Status</div>
+                    <div class="ehr-field-value">${device.status}</div>
+                </div>
+                <div class="ehr-field">
+                    <div class="ehr-field-label">Manufacturer</div>
+                    <div class="ehr-field-value">${device.manufacturer || 'N/A'}</div>
+                </div>
+                <div class="ehr-field">
+                    <div class="ehr-field-label">Model Number</div>
+                    <div class="ehr-field-value">${device.modelNumber || 'N/A'}</div>
+                </div>
+                <div class="ehr-field">
+                    <div class="ehr-field-label">Days Since Opened</div>
+                    <div class="ehr-field-value">${daysSinceOpened !== null ? daysSinceOpened : 'Unknown'}</div>
+                </div>
+                <div class="ehr-field">
+                    <div class="ehr-field-label">Days Remaining</div>
+                    <div class="ehr-field-value">${daysRemaining !== null ? Math.max(0, daysRemaining) : 'Unknown'}</div>
+                </div>
+                <div class="ehr-field" style="grid-column: 1 / -1;">
+                    <div class="ehr-field-label">Lifecycle Progress</div>
+                    ${progressHTML}
+                </div>
+            `;
+            detailHTML += '</div>';
+
+            document.getElementById('detailContent').innerHTML = detailHTML;
+            document.getElementById('deviceDetail').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function hideDetail() {
+            document.getElementById('deviceDetail').style.display = 'none';
+        }
+
+        // Initialize
+        window.onload = async () => {
+            try {
+                await authenticate();
+                await loadData();
+                
+                // Auto-refresh every 10 seconds
+                setInterval(loadData, 10000);
+            } catch (error) {
+                document.getElementById('deviceTable').innerHTML = `
+                    <div style="padding: 40px; text-align: center; color: #dc2626;">
+                        <strong>Configuration Error:</strong> Please update MEDPLUM_CLIENT_SECRET in the code.
+                    </div>
+                `;
+            }
+        };
+    </script>
+</body>
+</html>
