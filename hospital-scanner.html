@@ -427,17 +427,161 @@
                 // Second scan = Bag ID
                 bagID = code;
                 addToHistory('bag', bagID);
-                updateStatus('⏳', 'Processing...', 'Creating assignment in Medplum');
-                scanState = 'PROCESSING';
+                updateStatus('⏳', 'Checking...', 'Checking bag status');
 
-                // Stop scanner
-                if (scanner) {
-                    scanner.stop();
-                    document.getElementById('reader').classList.add('hidden');
+                // ===== CHECK BAG STATUS IMMEDIATELY =====
+                try {
+                    if (!accessToken) {
+                        await authenticate();
+                    }
+
+                    // Find the bag in Medplum
+                    const deviceResponse = await fetch(
+                        `${MEDPLUM_BASE_URL}/fhir/R4/Device?identifier=${bagID}`,
+                        {
+                            headers: {
+                                'Authorization': `Bearer ${accessToken}`,
+                                'Content-Type': 'application/fhir+json'
+                            }
+                        }
+                    );
+
+                    if (!deviceResponse.ok) {
+                        throw new Error(`Failed to find bag ${bagID}`);
+                    }
+
+                    const deviceData = await deviceResponse.json();
+                    if (!deviceData.entry || deviceData.entry.length === 0) {
+                        throw new Error(`Bag ${bagID} not found in system`);
+                    }
+
+                    const device = deviceData.entry[0].resource;
+                    const deviceId = device.id;
+
+                    // Check if this bag is currently assigned (has active DeviceUseStatement)
+                    const existingUseResponse = await fetch(
+                        `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement?status=active`,
+                        {
+                            headers: {
+                                'Authorization': `Bearer ${accessToken}`,
+                                'Content-Type': 'application/fhir+json'
+                            }
+                        }
+                    );
+
+                    let existingAssignment = null;
+                    if (existingUseResponse.ok) {
+                        const existingUseData = await existingUseResponse.json();
+                        
+                        // Find if THIS bag has an active assignment
+                        if (existingUseData.entry) {
+                            for (const entry of existingUseData.entry) {
+                                const statement = entry.resource;
+                                const statementBagId = statement.device.display;
+                                
+                                if (statementBagId === bagID) {
+                                    existingAssignment = statement;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // If bag is currently assigned, check if it's to a DIFFERENT patient
+                    if (existingAssignment) {
+                        console.log('Bag is currently assigned:', existingAssignment);
+                        
+                        // Get the existing patient's MRN
+                        const existingPatientRef = existingAssignment.subject.reference;
+                        const existingPatientId = existingPatientRef.split('/').pop();
+                        
+                        const existingPatientResponse = await fetch(
+                            `${MEDPLUM_BASE_URL}/fhir/R4/Patient/${existingPatientId}`,
+                            {
+                                headers: {
+                                    'Authorization': `Bearer ${accessToken}`,
+                                    'Content-Type': 'application/fhir+json'
+                                }
+                            }
+                        );
+
+                        if (existingPatientResponse.ok) {
+                            const existingPatientData = await existingPatientResponse.json();
+                            const existingMRN = existingPatientData.identifier ? existingPatientData.identifier[0].value : null;
+                            const existingPatientName = existingAssignment.subject.display || 'Unknown Patient';
+
+                            console.log('Existing patient MRN:', existingMRN);
+                            console.log('Current scan MRN:', patientMRN);
+
+                            // Compare MRNs
+                            if (existingMRN !== patientMRN) {
+                                // DIFFERENT PATIENT - Show warning!
+                                console.log('🚨 DIFFERENT PATIENT! Showing warning...');
+                                
+                                updateStatus('⚠️', 'Warning', `${bagID} is in use by another patient`);
+                                
+                                const userConfirmed = confirm(
+                                    `⚠️ BAG IN USE\n\n` +
+                                    `${bagID} is currently assigned to:\n` +
+                                    `${existingPatientName} (${existingMRN})\n\n` +
+                                    `You scanned:\n` +
+                                    `${patientMRN}\n\n` +
+                                    `Do you want to REASSIGN this bag to the new patient?`
+                                );
+
+                                if (!userConfirmed) {
+                                    // User cancelled
+                                    updateStatus('❌', 'Cancelled', 'Bag reassignment cancelled');
+                                    const resultDiv = document.getElementById('resultMessage');
+                                    resultDiv.innerHTML = `
+                                        <div class="error-message">
+                                            <strong>Assignment Cancelled</strong><br><br>
+                                            ${bagID} remains with ${existingPatientName} (${existingMRN})
+                                        </div>
+                                    `;
+                                    
+                                    scanState = 'WAITING_FOR_PATIENT';
+                                    bagID = null;
+                                    
+                                    const resetBtn = document.getElementById('resetBtn');
+                                    resetBtn.classList.remove('hidden');
+                                    resetBtn.disabled = false;
+                                    return;
+                                }
+                                
+                                console.log('✅ User confirmed reassignment');
+                            } else {
+                                console.log('Same patient - proceeding normally');
+                            }
+                        }
+                    } else {
+                        console.log('Bag is available - no active assignment');
+                    }
+
+                    // If we get here, proceed with assignment
+                    updateStatus('⏳', 'Processing...', 'Creating assignment in Medplum');
+                    scanState = 'PROCESSING';
+
+                    // Stop scanner
+                    if (scanner) {
+                        scanner.stop();
+                        document.getElementById('reader').classList.add('hidden');
+                    }
+
+                    // Process assignment
+                    await assignBagToPatient();
+
+                } catch (error) {
+                    updateStatus('❌', 'Error', error.message);
+                    const resultDiv = document.getElementById('resultMessage');
+                    resultDiv.innerHTML = `
+                        <div class="error-message">
+                            <strong>Error:</strong> ${error.message}
+                        </div>
+                    `;
+                    scanState = 'WAITING_FOR_PATIENT';
+                    bagID = null;
                 }
-
-                // Process assignment
-                await assignBagToPatient();
             }
         }
 
@@ -535,16 +679,8 @@
                     }
                 }
 
-                // ===== CHECK FOR EXISTING ACTIVE ASSIGNMENT =====
-                // Check if bag is already assigned to a different patient
-                console.log('=== CHECKING FOR EXISTING ASSIGNMENTS ===');
-                console.log('Device ID:', deviceId);
-                console.log('Bag ID:', bagID);
-                console.log('Current Patient ID:', patientId);
-                console.log('Current Patient Name:', patientName);
-                
-                // Get ALL active DeviceUseStatements and filter for our bag
-                const existingUseResponse = await fetch(
+                // Close out any existing active assignment for this bag (if user confirmed reassignment)
+                const closeOutResponse = await fetch(
                     `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement?status=active`,
                     {
                         headers: {
@@ -554,98 +690,32 @@
                     }
                 );
 
-                let previousPatientName = null;
-                if (existingUseResponse.ok) {
-                    const existingUseData = await existingUseResponse.json();
-                    console.log('All active DeviceUseStatements:', existingUseData);
-                    
-                    // Filter for this specific device
-                    const statementsForThisBag = existingUseData.entry ? 
-                        existingUseData.entry.filter(entry => {
+                if (closeOutResponse.ok) {
+                    const closeOutData = await closeOutResponse.json();
+                    if (closeOutData.entry) {
+                        for (const entry of closeOutData.entry) {
                             const statement = entry.resource;
-                            const statementDeviceRef = statement.device.reference;
-                            console.log('Checking statement:', statement.id);
-                            console.log('  Device ref:', statementDeviceRef);
-                            console.log('  Looking for: Device/' + deviceId);
-                            return statementDeviceRef === `Device/${deviceId}` || 
-                                   statementDeviceRef.includes(deviceId);
-                        }) : [];
-                    
-                    console.log('Statements for this bag:', statementsForThisBag);
-                    
-                    if (statementsForThisBag.length > 0) {
-                        console.log('Found', statementsForThisBag.length, 'existing assignments for this bag');
-                        
-                        // Check if it's a different patient
-                        const existingStatement = statementsForThisBag[0].resource;
-                        console.log('Existing statement:', existingStatement);
-                        
-                        const existingPatientId = existingStatement.subject.reference.split('/').pop();
-                        const currentPatientRef = patientId;
-                        
-                        console.log('Existing patient ID:', existingPatientId);
-                        console.log('Current patient ID:', currentPatientRef);
-                        console.log('Are they different?', existingPatientId !== currentPatientRef);
-                        
-                        if (existingPatientId !== currentPatientRef) {
-                            // Different patient - show warning and ask for confirmation
-                            previousPatientName = existingStatement.subject.display || 'another patient';
-                            
-                            console.log('DIFFERENT PATIENTS! Showing warning...');
-                            alert(`⚠️ WARNING\n\n${bagID} is currently assigned to ${previousPatientName}.\n\nClick OK to reassign it to ${patientName}, or Cancel to keep the current assignment.`);
-                            
-                            updateStatus('⚠️', 'Confirmation Required', `This bag is currently assigned to ${previousPatientName}`);
-                            
-                            const userConfirmed = confirm(
-                                `⚠️ WARNING\n\n` +
-                                `${bagID} is currently assigned to ${previousPatientName}.\n\n` +
-                                `Do you want to reassign it to ${patientName}?`
-                            );
-                            
-                            if (!userConfirmed) {
-                                console.log('User cancelled reassignment');
-                                updateStatus('❌', 'Cancelled', 'Assignment cancelled by user');
-                                resultDiv.innerHTML = `
-                                    <div class="error-message">
-                                        <strong>Assignment cancelled.</strong><br>
-                                        ${bagID} remains assigned to ${previousPatientName}.
-                                    </div>
-                                `;
-                                scanState = 'WAITING_FOR_PATIENT';
-                                document.getElementById('resetBtn').classList.remove('hidden');
-                                return;
-                            }
-                            console.log('User confirmed reassignment');
-                        } else {
-                            console.log('Same patient - no warning needed');
-                        }
-                        
-                        // Close out all existing active assignments for this bag
-                        for (const entry of statementsForThisBag) {
-                            const existingStatement = entry.resource;
-                            
-                            // Update it to completed
-                            existingStatement.status = 'completed';
-                            if (!existingStatement.timingPeriod) {
-                                existingStatement.timingPeriod = {};
-                            }
-                            existingStatement.timingPeriod.end = new Date().toISOString();
-
-                            await fetch(
-                                `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement/${existingStatement.id}`,
-                                {
-                                    method: 'PUT',
-                                    headers: {
-                                        'Authorization': `Bearer ${accessToken}`,
-                                        'Content-Type': 'application/fhir+json'
-                                    },
-                                    body: JSON.stringify(existingStatement)
+                            if (statement.device.display === bagID) {
+                                // Close it out
+                                statement.status = 'completed';
+                                if (!statement.timingPeriod) {
+                                    statement.timingPeriod = {};
                                 }
-                            );
-                            console.log('Closed out statement:', existingStatement.id);
+                                statement.timingPeriod.end = new Date().toISOString();
+
+                                await fetch(
+                                    `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement/${statement.id}`,
+                                    {
+                                        method: 'PUT',
+                                        headers: {
+                                            'Authorization': `Bearer ${accessToken}`,
+                                            'Content-Type': 'application/fhir+json'
+                                        },
+                                        body: JSON.stringify(statement)
+                                    }
+                                );
+                            }
                         }
-                    } else {
-                        console.log('No existing assignments found for this bag');
                     }
                 }
 
