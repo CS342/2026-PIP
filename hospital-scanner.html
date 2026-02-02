@@ -150,6 +150,9 @@
         .button-secondary {
             background: #95a5a6;
             color: white;
+            pointer-events: auto;
+            position: relative;
+            z-index: 10;
         }
 
         .button-secondary:hover {
@@ -534,6 +537,7 @@
 
                 // ===== CHECK FOR EXISTING ACTIVE ASSIGNMENT =====
                 // Check if bag is already assigned to a different patient
+                console.log('Checking for existing assignments for bag:', deviceId);
                 const existingUseResponse = await fetch(
                     `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement?device=Device/${deviceId}&status=active`,
                     {
@@ -547,19 +551,27 @@
                 let previousPatientName = null;
                 if (existingUseResponse.ok) {
                     const existingUseData = await existingUseResponse.json();
+                    console.log('Existing use data:', existingUseData);
+                    
                     if (existingUseData.entry && existingUseData.entry.length > 0) {
+                        console.log('Found', existingUseData.entry.length, 'existing assignments');
+                        
                         // Check if it's a different patient
                         const existingStatement = existingUseData.entry[0].resource;
+                        console.log('Existing statement:', existingStatement);
+                        
                         const existingPatientId = existingStatement.subject.reference.split('/').pop();
                         const currentPatientRef = patientId;
                         
                         console.log('Existing patient ID:', existingPatientId);
                         console.log('Current patient ID:', currentPatientRef);
+                        console.log('Are they different?', existingPatientId !== currentPatientRef);
                         
                         if (existingPatientId !== currentPatientRef) {
                             // Different patient - show warning and ask for confirmation
                             previousPatientName = existingStatement.subject.display || 'another patient';
                             
+                            console.log('DIFFERENT PATIENTS! Showing warning...');
                             updateStatus('⚠️', 'Confirmation Required', `This bag is currently assigned to ${previousPatientName}`);
                             
                             const userConfirmed = confirm(
@@ -569,6 +581,7 @@
                             );
                             
                             if (!userConfirmed) {
+                                console.log('User cancelled reassignment');
                                 updateStatus('❌', 'Cancelled', 'Assignment cancelled by user');
                                 resultDiv.innerHTML = `
                                     <div class="error-message">
@@ -580,6 +593,9 @@
                                 document.getElementById('resetBtn').classList.remove('hidden');
                                 return;
                             }
+                            console.log('User confirmed reassignment');
+                        } else {
+                            console.log('Same patient - no warning needed');
                         }
                         
                         // Close out all existing active assignments for this bag
@@ -684,12 +700,10 @@
                 `;
 
                 // Show reset button
-                document.getElementById('resetBtn').classList.remove('hidden');
-
-                // Auto-reset after 3 seconds
-                setTimeout(() => {
-                    resetScanner();
-                }, 5000);
+                const resetBtn = document.getElementById('resetBtn');
+                resetBtn.classList.remove('hidden');
+                resetBtn.disabled = false;
+                document.getElementById('scanBtn').classList.add('hidden');
 
             } catch (error) {
                 updateStatus('❌', 'Error', error.message);
@@ -710,10 +724,12 @@
             }
             
             document.getElementById('reader').classList.add('hidden');
+            document.getElementById('scanBtn').classList.remove('hidden');
             document.getElementById('scanBtn').disabled = false;
             document.getElementById('resetBtn').classList.add('hidden');
             document.getElementById('resultMessage').innerHTML = '';
             document.getElementById('manualInput').value = '';
+            document.getElementById('scanHistory').innerHTML = '';
             
             patientMRN = null;
             bagID = null;
