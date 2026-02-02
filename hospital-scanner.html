@@ -550,10 +550,13 @@
                     if (existingUseData.entry && existingUseData.entry.length > 0) {
                         // Check if it's a different patient
                         const existingStatement = existingUseData.entry[0].resource;
-                        const existingPatientRef = existingStatement.subject.reference;
-                        const currentPatientRef = `Patient/${patientId}`;
+                        const existingPatientId = existingStatement.subject.reference.split('/').pop();
+                        const currentPatientRef = patientId;
                         
-                        if (existingPatientRef !== currentPatientRef) {
+                        console.log('Existing patient ID:', existingPatientId);
+                        console.log('Current patient ID:', currentPatientRef);
+                        
+                        if (existingPatientId !== currentPatientRef) {
                             // Different patient - show warning and ask for confirmation
                             previousPatientName = existingStatement.subject.display || 'another patient';
                             
@@ -574,6 +577,7 @@
                                     </div>
                                 `;
                                 scanState = 'WAITING_FOR_PATIENT';
+                                document.getElementById('resetBtn').classList.remove('hidden');
                                 return;
                             }
                         }
@@ -678,6 +682,9 @@
                         <a href="dashboard.html" style="color: #155724; font-weight: 600;">View Dashboard →</a>
                     </div>
                 `;
+
+                // Show reset button
+                document.getElementById('resetBtn').classList.remove('hidden');
 
                 // Auto-reset after 3 seconds
                 setTimeout(() => {
