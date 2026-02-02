@@ -776,14 +776,10 @@
                         const daysClass = daysRemaining < 10 ? 'color: #dc3545;' : 
                                         daysRemaining < 30 ? 'color: #ffc107;' : 
                                         'color: #28a745;';
-                        message += `<br><br>📦 <strong style="${daysClass}">${daysRemaining} days remaining</strong> on this bag (${90 - daysRemaining} days used)`;
+                        message += `<br><br>📦 <strong style="${daysClass}">${daysRemaining} days remaining</strong> on this bag`;
                     } else {
-                        message += '<br><br>⚠️ <strong style="color: #dc3545;">WARNING: This bag has EXPIRED!</strong><br>It has been open for more than 90 days.';
+                        message += '<br><br>⚠️ <strong style="color: #dc3545;">WARNING: This bag has EXPIRED!</strong>';
                     }
-                }
-                
-                if (previousPatientName) {
-                    message += `<br><br>🔄 <em>Reassigned from ${previousPatientName}</em>`;
                 }
 
                 resultDiv.innerHTML = `
