@@ -537,9 +537,15 @@
 
                 // ===== CHECK FOR EXISTING ACTIVE ASSIGNMENT =====
                 // Check if bag is already assigned to a different patient
-                console.log('Checking for existing assignments for bag:', deviceId);
+                console.log('=== CHECKING FOR EXISTING ASSIGNMENTS ===');
+                console.log('Device ID:', deviceId);
+                console.log('Bag ID:', bagID);
+                console.log('Current Patient ID:', patientId);
+                console.log('Current Patient Name:', patientName);
+                
+                // Get ALL active DeviceUseStatements and filter for our bag
                 const existingUseResponse = await fetch(
-                    `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement?device=Device/${deviceId}&status=active`,
+                    `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement?status=active`,
                     {
                         headers: {
                             'Authorization': `Bearer ${accessToken}`,
@@ -551,13 +557,27 @@
                 let previousPatientName = null;
                 if (existingUseResponse.ok) {
                     const existingUseData = await existingUseResponse.json();
-                    console.log('Existing use data:', existingUseData);
+                    console.log('All active DeviceUseStatements:', existingUseData);
                     
-                    if (existingUseData.entry && existingUseData.entry.length > 0) {
-                        console.log('Found', existingUseData.entry.length, 'existing assignments');
+                    // Filter for this specific device
+                    const statementsForThisBag = existingUseData.entry ? 
+                        existingUseData.entry.filter(entry => {
+                            const statement = entry.resource;
+                            const statementDeviceRef = statement.device.reference;
+                            console.log('Checking statement:', statement.id);
+                            console.log('  Device ref:', statementDeviceRef);
+                            console.log('  Looking for: Device/' + deviceId);
+                            return statementDeviceRef === `Device/${deviceId}` || 
+                                   statementDeviceRef.includes(deviceId);
+                        }) : [];
+                    
+                    console.log('Statements for this bag:', statementsForThisBag);
+                    
+                    if (statementsForThisBag.length > 0) {
+                        console.log('Found', statementsForThisBag.length, 'existing assignments for this bag');
                         
                         // Check if it's a different patient
-                        const existingStatement = existingUseData.entry[0].resource;
+                        const existingStatement = statementsForThisBag[0].resource;
                         console.log('Existing statement:', existingStatement);
                         
                         const existingPatientId = existingStatement.subject.reference.split('/').pop();
@@ -572,6 +592,8 @@
                             previousPatientName = existingStatement.subject.display || 'another patient';
                             
                             console.log('DIFFERENT PATIENTS! Showing warning...');
+                            alert(`⚠️ WARNING\n\n${bagID} is currently assigned to ${previousPatientName}.\n\nClick OK to reassign it to ${patientName}, or Cancel to keep the current assignment.`);
+                            
                             updateStatus('⚠️', 'Confirmation Required', `This bag is currently assigned to ${previousPatientName}`);
                             
                             const userConfirmed = confirm(
@@ -599,7 +621,7 @@
                         }
                         
                         // Close out all existing active assignments for this bag
-                        for (const entry of existingUseData.entry) {
+                        for (const entry of statementsForThisBag) {
                             const existingStatement = entry.resource;
                             
                             // Update it to completed
@@ -620,7 +642,10 @@
                                     body: JSON.stringify(existingStatement)
                                 }
                             );
+                            console.log('Closed out statement:', existingStatement.id);
                         }
+                    } else {
+                        console.log('No existing assignments found for this bag');
                     }
                 }
 
@@ -695,7 +720,7 @@
                     <div class="success-message">
                         ${message}
                         <br><br>
-                        <a href="dashboard (1).html" style="color: #155724; font-weight: 600;">View Dashboard →</a>
+                        <a href="dashboard.html" style="color: #155724; font-weight: 600;">View Dashboard →</a>
                     </div>
                 `;
 
