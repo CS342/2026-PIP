@@ -533,7 +533,7 @@
                 }
 
                 // ===== CHECK FOR EXISTING ACTIVE ASSIGNMENT =====
-                // Close out any existing active DeviceUseStatements for this bag
+                // Check if bag is already assigned to a different patient
                 const existingUseResponse = await fetch(
                     `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement?device=Device/${deviceId}&status=active`,
                     {
@@ -544,9 +544,40 @@
                     }
                 );
 
+                let previousPatientName = null;
                 if (existingUseResponse.ok) {
                     const existingUseData = await existingUseResponse.json();
                     if (existingUseData.entry && existingUseData.entry.length > 0) {
+                        // Check if it's a different patient
+                        const existingStatement = existingUseData.entry[0].resource;
+                        const existingPatientRef = existingStatement.subject.reference;
+                        const currentPatientRef = `Patient/${patientId}`;
+                        
+                        if (existingPatientRef !== currentPatientRef) {
+                            // Different patient - show warning and ask for confirmation
+                            previousPatientName = existingStatement.subject.display || 'another patient';
+                            
+                            updateStatus('⚠️', 'Confirmation Required', `This bag is currently assigned to ${previousPatientName}`);
+                            
+                            const userConfirmed = confirm(
+                                `⚠️ WARNING\n\n` +
+                                `${bagID} is currently assigned to ${previousPatientName}.\n\n` +
+                                `Do you want to reassign it to ${patientName}?`
+                            );
+                            
+                            if (!userConfirmed) {
+                                updateStatus('❌', 'Cancelled', 'Assignment cancelled by user');
+                                resultDiv.innerHTML = `
+                                    <div class="error-message">
+                                        <strong>Assignment cancelled.</strong><br>
+                                        ${bagID} remains assigned to ${previousPatientName}.
+                                    </div>
+                                `;
+                                scanState = 'WAITING_FOR_PATIENT';
+                                return;
+                            }
+                        }
+                        
                         // Close out all existing active assignments for this bag
                         for (const entry of existingUseData.entry) {
                             const existingStatement = entry.resource;
@@ -611,9 +642,33 @@
                 updateStatus('✅', 'Success!', 'Assignment complete');
                 addToHistory('complete', `${bagID} → ${patientName}`);
 
+                // Calculate days remaining
+                let daysRemaining = null;
+                if (openedDate) {
+                    const opened = new Date(openedDate);
+                    const now = new Date();
+                    const diffTime = Math.abs(now - opened);
+                    const daysSinceOpened = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    daysRemaining = 90 - daysSinceOpened;
+                }
+
                 let message = `<strong>${bagID}</strong> assigned to <strong>${patientName}</strong>`;
+                
                 if (isFirstUse) {
-                    message += '<br><br>🎉 <strong>Package opened! 90-day timer started.</strong>';
+                    message += '<br><br>🎉 <strong>Package opened! 90 days remaining.</strong>';
+                } else if (daysRemaining !== null) {
+                    if (daysRemaining > 0) {
+                        const daysClass = daysRemaining < 10 ? 'color: #dc3545;' : 
+                                        daysRemaining < 30 ? 'color: #ffc107;' : 
+                                        'color: #28a745;';
+                        message += `<br><br>📦 <strong style="${daysClass}">${daysRemaining} days remaining</strong> on this bag (${90 - daysRemaining} days used)`;
+                    } else {
+                        message += '<br><br>⚠️ <strong style="color: #dc3545;">WARNING: This bag has EXPIRED!</strong><br>It has been open for more than 90 days.';
+                    }
+                }
+                
+                if (previousPatientName) {
+                    message += `<br><br>🔄 <em>Reassigned from ${previousPatientName}</em>`;
                 }
 
                 resultDiv.innerHTML = `
