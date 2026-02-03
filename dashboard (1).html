@@ -517,6 +517,10 @@
                                     <span class="info-value" id="sensor-${device.id}">${sensorIcon} ${sensorStatus}</span>
                                 </div>
                                 <div class="info-item">
+                                    <span class="info-label">Wear Hours</span>
+                                    <span class="info-value" id="wear-hours-${device.id}">Calculating...</span>
+                                </div>
+                                <div class="info-item">
                                     <span class="info-label">Model</span>
                                     <span class="info-value">${device.modelNumber || 'N/A'}</span>
                                 </div>
@@ -555,9 +559,20 @@
                 document.getElementById('availableBags').textContent = 
                     devices.length - parseInt(document.getElementById('inUseBags').textContent) - expiredCount;
 
-                // Fetch sensor data for each device
-                devices.forEach(device => {
+                // Fetch sensor data and wear hours for each device
+                devices.forEach(async device => {
                     fetchLatestSensorData(device.id);
+                    
+                    // Calculate and display wear hours
+                    const wearHours = await calculateWearHours(device.id);
+                    const wearHoursElement = document.getElementById(`wear-hours-${device.id}`);
+                    if (wearHoursElement) {
+                        if (wearHours !== null) {
+                            wearHoursElement.innerHTML = `<strong style="color: #3498db;">${wearHours} hrs</strong>`;
+                        } else {
+                            wearHoursElement.textContent = 'N/A';
+                        }
+                    }
                 });
 
             } catch (error) {
@@ -632,6 +647,69 @@
             if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
             if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
             return `${Math.floor(seconds / 86400)}d ago`;
+        }
+
+        // ===== CALCULATE WEAR HOURS =====
+        async function calculateWearHours(deviceId) {
+            try {
+                // Get ALL observations for this device, sorted by time
+                const response = await fetch(
+                    `${MEDPLUM_BASE_URL}/fhir/R4/Observation?subject=Device/${deviceId}&code=occupied&_sort=-date&_count=1000`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/fhir+json'
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch observations');
+                }
+
+                const data = await response.json();
+                
+                if (!data.entry || data.entry.length === 0) {
+                    return 0;
+                }
+
+                // Group observations by hour
+                const hourlyOccupancy = {};
+                
+                data.entry.forEach(entry => {
+                    const obs = entry.resource;
+                    const timestamp = new Date(obs.effectiveDateTime);
+                    const hourKey = `${timestamp.getFullYear()}-${timestamp.getMonth()}-${timestamp.getDate()}-${timestamp.getHours()}`;
+                    
+                    if (!hourlyOccupancy[hourKey]) {
+                        hourlyOccupancy[hourKey] = {
+                            occupied: 0,
+                            total: 0
+                        };
+                    }
+                    
+                    hourlyOccupancy[hourKey].total++;
+                    if (obs.valueBoolean) {
+                        hourlyOccupancy[hourKey].occupied++;
+                    }
+                });
+
+                // Count wear hours (hours where occupied ≥ 50% of measurements)
+                let wearHours = 0;
+                Object.values(hourlyOccupancy).forEach(hour => {
+                    const occupancyRate = hour.occupied / hour.total;
+                    // If occupied for ≥50% of the hour, count as 1 wear hour
+                    if (occupancyRate >= 0.5) {
+                        wearHours++;
+                    }
+                });
+
+                return wearHours;
+
+            } catch (error) {
+                console.error('Error calculating wear hours:', error);
+                return null;
+            }
         }
 
         // Initialize on page load
