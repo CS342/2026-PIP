@@ -823,20 +823,29 @@
 
                 if (device.note && device.note.length > 0) {
                     const noteText = device.note[0].text;
-                    const match = noteText.match(/Package opened: (\d{4}-\d{2}-\d{2}T[\d:]+Z)/);
+                    console.log('Checking device note:', noteText);
+                    // Updated regex to handle optional milliseconds: .123
+                    const match = noteText.match(/Package opened: (\d{4}-\d{2}-\d{2}T[\d:\.]+Z)/);
                     if (match) {
                         isFirstUse = false;
                         openedDate = match[1];
+                        console.log('✅ Found existing opened date:', openedDate);
+                    } else {
+                        console.log('❌ No opened date found in note:', noteText);
                     }
+                } else {
+                    console.log('ℹ️ No notes on device, treating as first use');
                 }
 
                 // If first use, update device with opened date
                 if (isFirstUse) {
+                    console.log('🎉 FIRST USE DETECTED - Setting opened date to NOW');
                     openedDate = new Date().toISOString();
                     device.note = [{
                         text: `Package opened: ${openedDate}`
                     }];
 
+                    console.log('Updating device with opened date...');
                     const updateResponse = await fetch(
                         `${MEDPLUM_BASE_URL}/fhir/R4/Device/${deviceId}`,
                         {
@@ -852,6 +861,9 @@
                     if (!updateResponse.ok) {
                         throw new Error('Failed to update device with opened date');
                     }
+                    console.log('✅ Device updated with opened date');
+                } else {
+                    console.log('ℹ️ Using existing opened date:', openedDate);
                 }
 
                 // Create NEW DeviceUseStatement for current patient
