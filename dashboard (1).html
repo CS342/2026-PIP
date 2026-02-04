@@ -35,6 +35,60 @@
             font-size: 14px;
         }
 
+        /* Alert Banner for Expired Bags */
+        .alert-banner {
+            background: #dc3545;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3); }
+            50% { box-shadow: 0 4px 20px rgba(220, 53, 69, 0.6); }
+        }
+
+        .alert-banner h2 {
+            margin-bottom: 10px;
+            font-size: 22px;
+        }
+
+        .alert-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .alert-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .alert-info {
+            flex: 1;
+        }
+
+        .alert-info strong {
+            display: block;
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+
+        .alert-info small {
+            opacity: 0.9;
+        }
+
+        .alert-actions {
+            display: flex;
+            gap: 10px;
+        }
+
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -71,8 +125,8 @@
         .bag-card {
             padding: 20px;
             border-bottom: 1px solid #e1e4e8;
-            cursor: pointer;
             transition: background 0.2s;
+            position: relative;
         }
 
         .bag-card:hover {
@@ -81,6 +135,11 @@
 
         .bag-card:last-child {
             border-bottom: none;
+        }
+
+        .bag-card.expired-in-use {
+            background: #fff5f5;
+            border-left: 4px solid #dc3545;
         }
 
         .bag-header {
@@ -94,6 +153,13 @@
             font-size: 20px;
             font-weight: 600;
             color: #333;
+            cursor: pointer;
+        }
+
+        .bag-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
         }
 
         .status-badge {
@@ -116,6 +182,22 @@
         .status-expired {
             background: #f8d7da;
             color: #721c24;
+        }
+
+        .status-expired-in-use {
+            background: #dc3545;
+            color: white;
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .status-discarded {
+            background: #6c757d;
+            color: white;
         }
 
         .bag-info {
@@ -231,8 +313,10 @@
 
         .btn {
             padding: 10px 20px;
-            border-radius: 8px;
-            text-decoration: none;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
             font-weight: 600;
             transition: all 0.3s;
         }
@@ -251,6 +335,36 @@
             color: white;
         }
 
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-small {
+            font-size: 11px;
+            padding: 5px 10px;
+        }
+
+        .btn-white {
+            background: white;
+            color: #dc3545;
+            border: 2px solid white;
+        }
+
+        .btn-white:hover {
+            background: rgba(255, 255, 255, 0.9);
+        }
+
         .refresh-btn {
             position: fixed;
             bottom: 30px;
@@ -267,10 +381,99 @@
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
             transition: all 0.3s;
+            border: none;
         }
 
         .refresh-btn:hover {
             transform: scale(1.1);
+        }
+
+        .last-update {
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .filter-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #e1e4e8;
+            border-radius: 5px;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .filter-btn:hover {
+            border-color: #667eea;
+        }
+
+        .hidden {
+            display: none !important;
         }
     </style>
 </head>
@@ -279,9 +482,24 @@
         <h1>🏥 Positioner Bag Fleet Dashboard</h1>
         <p class="subtitle">Real-time monitoring of bag lifecycle and usage</p>
         <div class="action-buttons">
-            <a href="scanner-app.html" class="btn btn-primary">📱 Scan New Assignment</a>
+            <a href="hospital-scanner.html" class="btn btn-primary">📱 Scan New Assignment</a>
             <button onclick="loadData()" class="btn btn-secondary">🔄 Refresh</button>
         </div>
+    </div>
+
+    <!-- Expired Bags Alert Banner -->
+    <div id="expiredAlerts" class="hidden"></div>
+
+    <div class="filter-toggle">
+        <button class="filter-btn active" onclick="setFilter('active')" id="filterActive">
+            Show Active Bags
+        </button>
+        <button class="filter-btn" onclick="setFilter('discarded')" id="filterDiscarded">
+            Show Discarded Bags
+        </button>
+        <button class="filter-btn" onclick="setFilter('all')" id="filterAll">
+            Show All
+        </button>
     </div>
 
     <div class="stats">
@@ -298,8 +516,8 @@
             <div class="stat-label">Available</div>
         </div>
         <div class="stat-card">
-            <div class="stat-number" id="expiredBags">-</div>
-            <div class="stat-label">Expired</div>
+            <div class="stat-number" id="expiredInUseBags" style="color: #dc3545;">-</div>
+            <div class="stat-label">⚠️ Expired In Use</div>
         </div>
     </div>
 
@@ -312,17 +530,40 @@
         </div>
     </div>
 
-    <div class="refresh-btn" onclick="loadData()" title="Refresh data">
+    <div class="last-update" id="lastUpdate">Last updated: Never</div>
+
+    <button class="refresh-btn" onclick="loadData()" title="Refresh data">
         🔄
+    </button>
+
+    <!-- Discard Confirmation Modal -->
+    <div id="discardModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">⚠️ Discard Bag?</div>
+            <div class="modal-body" id="discardModalBody">
+                Are you sure you want to discard <strong id="discardBagId"></strong>?
+                <br><br>
+                This will remove the bag from active circulation. You can view discarded bags using the filter above.
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeDiscardModal()">Cancel</button>
+                <button class="btn btn-danger" onclick="confirmDiscard()">Discard Bag</button>
+            </div>
+        </div>
     </div>
 
     <script>
         // ===== CONFIGURATION =====
         const MEDPLUM_BASE_URL = 'https://api.medplum.com';
         const MEDPLUM_CLIENT_ID = 'da02ae93-04f4-48a3-a32e-3e5a96fb5bd0';
-        const MEDPLUM_CLIENT_SECRET = '419ead2a73c4a53f5e6829168042db73c3dd8a1ecc6ed37640b1dc6ac1896bd6'; // Click the eye icon in Medplum to reveal and copy this
+        const MEDPLUM_CLIENT_SECRET = '419ead2a73c4a53f5e6829168042db73c3dd8a1ecc6ed37640b1dc6ac1896bd6';
         
         let accessToken = null;
+        let currentFilter = 'active';
+        let allDevices = [];
+        let allUseStatements = [];
+        let pendingDiscardDeviceId = null;
+        let expiredBagsInUse = []; // Track expired bags that are currently in use
 
         // ===== AUTHENTICATION =====
         async function authenticate() {
@@ -347,6 +588,179 @@
             return accessToken;
         }
 
+        // ===== FILTER FUNCTIONS =====
+        function setFilter(filter) {
+            currentFilter = filter;
+            
+            document.getElementById('filterActive').classList.remove('active');
+            document.getElementById('filterDiscarded').classList.remove('active');
+            document.getElementById('filterAll').classList.remove('active');
+            
+            if (filter === 'active') {
+                document.getElementById('filterActive').classList.add('active');
+            } else if (filter === 'discarded') {
+                document.getElementById('filterDiscarded').classList.add('active');
+            } else {
+                document.getElementById('filterAll').classList.add('active');
+            }
+            
+            renderBags();
+        }
+
+        function isDiscarded(device) {
+            if (device.note && device.note.length > 0) {
+                for (let note of device.note) {
+                    if (note.text && note.text.includes('DISCARDED:')) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // ===== DISCARD FUNCTIONS =====
+        function showDiscardModal(deviceId, bagId, isExpired, patientName) {
+            pendingDiscardDeviceId = deviceId;
+            document.getElementById('discardBagId').textContent = bagId;
+            
+            let modalBody = `Are you sure you want to discard <strong>${bagId}</strong>?<br><br>`;
+            
+            if (isExpired && patientName) {
+                modalBody += `<div style="background: #fff3cd; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
+                    <strong>⚠️ This expired bag is currently assigned to ${patientName}</strong>
+                </div>`;
+                modalBody += `Discarding will:<br>
+                    • Remove the bag from circulation<br>
+                    • End the current patient assignment<br>
+                    • Clear all associated data<br><br>`;
+            } else {
+                modalBody += `This will remove the bag from active circulation. You can view discarded bags using the filter above.<br><br>`;
+            }
+            
+            document.getElementById('discardModalBody').innerHTML = modalBody;
+            document.getElementById('discardModal').classList.add('show');
+        }
+
+        function closeDiscardModal() {
+            pendingDiscardDeviceId = null;
+            document.getElementById('discardModal').classList.remove('show');
+        }
+
+        async function confirmDiscard() {
+            if (!pendingDiscardDeviceId) return;
+            
+            try {
+                const device = allDevices.find(d => d.id === pendingDiscardDeviceId);
+                if (!device) {
+                    throw new Error('Device not found');
+                }
+
+                // End any active assignments
+                const currentUse = findCurrentUseStatement(device, allUseStatements);
+                if (currentUse) {
+                    console.log('Ending active assignment before discard');
+                    currentUse.status = 'completed';
+                    if (!currentUse.timingPeriod) {
+                        currentUse.timingPeriod = {};
+                    }
+                    currentUse.timingPeriod.end = new Date().toISOString();
+                    
+                    await fetch(
+                        `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement/${currentUse.id}`,
+                        {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `Bearer ${accessToken}`,
+                                'Content-Type': 'application/fhir+json'
+                            },
+                            body: JSON.stringify(currentUse)
+                        }
+                    );
+                }
+
+                // Add discard note
+                const discardNote = {
+                    text: `DISCARDED: ${new Date().toISOString()} - Removed from circulation`
+                };
+
+                if (!device.note) {
+                    device.note = [discardNote];
+                } else {
+                    device.note.push(discardNote);
+                }
+
+                // Update device in Medplum
+                const response = await fetch(
+                    `${MEDPLUM_BASE_URL}/fhir/R4/Device/${pendingDiscardDeviceId}`,
+                    {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/fhir+json'
+                        },
+                        body: JSON.stringify(device)
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error('Failed to discard bag');
+                }
+
+                console.log('✅ Bag discarded successfully');
+                closeDiscardModal();
+                
+                await loadData();
+                
+            } catch (error) {
+                console.error('Error discarding bag:', error);
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        async function restoreBag(deviceId, bagId) {
+            if (!confirm(`Restore ${bagId} back to active circulation?`)) {
+                return;
+            }
+            
+            try {
+                const device = allDevices.find(d => d.id === deviceId);
+                if (!device) {
+                    throw new Error('Device not found');
+                }
+
+                if (device.note && device.note.length > 0) {
+                    device.note = device.note.filter(note => !note.text.includes('DISCARDED:'));
+                    
+                    if (device.note.length === 0) {
+                        device.note = [];
+                    }
+                }
+
+                const response = await fetch(
+                    `${MEDPLUM_BASE_URL}/fhir/R4/Device/${deviceId}`,
+                    {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/fhir+json'
+                        },
+                        body: JSON.stringify(device)
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error('Failed to restore bag');
+                }
+
+                console.log('✅ Bag restored successfully');
+                await loadData();
+                
+            } catch (error) {
+                console.error('Error restoring bag:', error);
+                alert(`Error: ${error.message}`);
+            }
+        }
+
         // ===== CALCULATE DAYS SINCE OPENED =====
         function calculateDaysSinceOpened(openedDateString) {
             if (!openedDateString) return null;
@@ -360,20 +774,41 @@
 
         // ===== EXTRACT OPENED DATE FROM DEVICE =====
         function getOpenedDate(device) {
-            console.log('Checking device:', device);
             if (device.note && device.note.length > 0) {
-                const noteText = device.note[0].text;
-                console.log('Note text:', noteText);
-                // Updated regex to handle optional milliseconds: .123
-                const match = noteText.match(/(\d{4}-\d{2}-\d{2}T[\d:.]+Z)/);
-                console.log('Match result:', match);
-                if (match) {
-                    console.log('Extracted date:', match[1]);
-                    return match[1];
+                for (let note of device.note) {
+                    const noteText = note.text;
+                    if (noteText.includes('Package opened:')) {
+                        const match = noteText.match(/(\d{4}-\d{2}-\d{2}T[\d:\.]+Z)/);
+                        if (match) {
+                            return match[1];
+                        }
+                    }
                 }
             }
-            console.log('No date found');
             return null;
+        }
+
+        // ===== IMPROVED MATCHING FUNCTION =====
+        function findCurrentUseStatement(device, useStatements) {
+            const deviceId = device.id;
+            const bagIdentifier = device.identifier ? device.identifier[0].value : null;
+            
+            const matches = useStatements.filter(us => {
+                if (us.status !== 'active') return false;
+                if (us.timingPeriod && us.timingPeriod.end) return false;
+                
+                const deviceRef = us.device.reference;
+                
+                if (deviceRef.includes(deviceId)) return true;
+                if (bagIdentifier && deviceRef.includes(bagIdentifier)) return true;
+                
+                return false;
+            });
+            
+            if (matches.length === 0) return null;
+            
+            const sorted = matches.sort((a, b) => new Date(b.recordedOn) - new Date(a.recordedOn));
+            return sorted[0];
         }
 
         // ===== LOAD DATA =====
@@ -391,9 +826,10 @@
                     await authenticate();
                 }
 
-                // Fetch all devices
+                console.log('=== FETCHING DATA ===');
+
                 const devicesResponse = await fetch(
-                    `${MEDPLUM_BASE_URL}/fhir/R4/Device`,
+                    `${MEDPLUM_BASE_URL}/fhir/R4/Device?_count=100`,
                     {
                         headers: {
                             'Authorization': `Bearer ${accessToken}`,
@@ -407,11 +843,11 @@
                 }
 
                 const devicesData = await devicesResponse.json();
-                const devices = devicesData.entry ? devicesData.entry.map(e => e.resource) : [];
+                allDevices = devicesData.entry ? devicesData.entry.map(e => e.resource) : [];
+                console.log(`Found ${allDevices.length} devices`);
 
-                // Fetch all DeviceUseStatements
                 const useStatementsResponse = await fetch(
-                    `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement`,
+                    `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement?_count=1000`,
                     {
                         headers: {
                             'Authorization': `Bearer ${accessToken}`,
@@ -421,161 +857,19 @@
                 );
 
                 const useStatementsData = await useStatementsResponse.json();
-                const useStatements = useStatementsData.entry ? useStatementsData.entry.map(e => e.resource) : [];
+                allUseStatements = useStatementsData.entry ? useStatementsData.entry.map(e => e.resource) : [];
+                console.log(`Found ${allUseStatements.length} use statements`);
 
-                // Process each device
-                const bagsHTML = devices.map(device => {
-                    const bagId = device.identifier ? device.identifier[0].value : device.id;
-                    const openedDate = getOpenedDate(device);
-                    const daysSinceOpened = openedDate ? calculateDaysSinceOpened(openedDate) : null;
-                    const daysRemaining = daysSinceOpened !== null ? 90 - daysSinceOpened : null;
-                    
-                    // Find current usage (active DeviceUseStatement) - get the MOST RECENT one
-                    const activeUseStatements = useStatements.filter(us => 
-                        us.device.reference.includes(device.id) && 
-                        us.status === 'active' &&
-                        (!us.timingPeriod || !us.timingPeriod.end)
-                    );
-                    
-                    // Sort by recordedOn to get the most recent
-                    const currentUse = activeUseStatements.length > 0 
-                        ? activeUseStatements.sort((a, b) => new Date(b.recordedOn) - new Date(a.recordedOn))[0]
-                        : null;
+                // Check for expired bags in use
+                checkExpiredBagsInUse();
 
-                    // Find all usage history for this device
-                    const history = useStatements
-                        .filter(us => us.device.reference.includes(device.id))
-                        .sort((a, b) => new Date(b.recordedOn) - new Date(a.recordedOn));
+                renderBags();
 
-                    // Determine status
-                    let status = 'available';
-                    let statusClass = 'status-available';
-                    if (daysRemaining !== null && daysRemaining < 0) {
-                        status = 'expired';
-                        statusClass = 'status-expired';
-                    } else if (currentUse) {
-                        status = 'in-use';
-                        statusClass = 'status-in-use';
-                    }
-
-                    // Progress bar
-                    let progressPercent = daysSinceOpened !== null ? (daysSinceOpened / 90) * 100 : 0;
-                    progressPercent = Math.min(progressPercent, 100);
-                    let progressClass = 'progress-good';
-                    if (progressPercent > 75) progressClass = 'progress-danger';
-                    else if (progressPercent > 50) progressClass = 'progress-warning';
-
-                    // Current patient info
-                    let currentPatientHTML = '<span style="color: #999;">Not assigned</span>';
-                    if (currentUse && currentUse.subject) {
-                        currentPatientHTML = currentUse.subject.display || currentUse.subject.reference;
-                    }
-
-                    // Get latest sensor reading (if available)
-                    let sensorStatus = '<span style="color: #999;">No sensor data</span>';
-                    let sensorIcon = '❓';
-                    // We'll fetch this separately below
-                    
-                    // History HTML
-                    const historyHTML = history.length > 0 ? history.map(h => {
-                        const startDate = h.timingPeriod ? new Date(h.timingPeriod.start).toLocaleString() : 'Unknown';
-                        const endDate = h.timingPeriod && h.timingPeriod.end ? 
-                            new Date(h.timingPeriod.end).toLocaleString() : 
-                            '<strong>Currently in use</strong>';
-                        const patient = h.subject ? (h.subject.display || h.subject.reference) : 'Unknown';
-                        
-                        return `
-                            <div class="history-item">
-                                <strong>Patient:</strong> ${patient}<br>
-                                <strong>Start:</strong> ${startDate}<br>
-                                <strong>End:</strong> ${endDate}
-                            </div>
-                        `;
-                    }).join('') : '<div class="history-item">No usage history</div>';
-
-                    return `
-                        <div class="bag-card" onclick="toggleHistory('${device.id}')">
-                            <div class="bag-header">
-                                <div class="bag-id">📦 ${bagId}</div>
-                                <span class="status-badge ${statusClass}">${status.toUpperCase()}</span>
-                            </div>
-                            <div class="bag-info">
-                                <div class="info-item">
-                                    <span class="info-label">Days Since Opened</span>
-                                    <span class="info-value">${daysSinceOpened !== null ? daysSinceOpened : 'Unknown'}</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="info-label">Days Remaining</span>
-                                    <span class="info-value">${daysRemaining !== null ? Math.max(0, daysRemaining) : 'Unknown'}</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="info-label">Current Patient</span>
-                                    <span class="info-value">${currentPatientHTML}</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="info-label">Sensor Status</span>
-                                    <span class="info-value" id="sensor-${device.id}">${sensorIcon} ${sensorStatus}</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="info-label">Wear Hours</span>
-                                    <span class="info-value" id="wear-hours-${device.id}">Calculating...</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="info-label">Model</span>
-                                    <span class="info-value">${device.modelNumber || 'N/A'}</span>
-                                </div>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill ${progressClass}" style="width: ${progressPercent}%"></div>
-                            </div>
-                            <div class="bag-history" id="history-${device.id}">
-                                <div class="history-title">Usage History (${history.length} sessions)</div>
-                                ${historyHTML}
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-
-                contentDiv.innerHTML = bagsHTML || '<div class="loading"><p>No bags found</p></div>';
-
-                // Update stats
-                document.getElementById('totalBags').textContent = devices.length;
-                document.getElementById('inUseBags').textContent = devices.filter(d => {
-                    const currentUse = useStatements.find(us => 
-                        us.device.reference.includes(d.id) && 
-                        us.status === 'active' &&
-                        (!us.timingPeriod || !us.timingPeriod.end)
-                    );
-                    return currentUse !== undefined;
-                }).length;
-                
-                const expiredCount = devices.filter(d => {
-                    const openedDate = getOpenedDate(d);
-                    const days = openedDate ? calculateDaysSinceOpened(openedDate) : null;
-                    return days !== null && days > 90;
-                }).length;
-                
-                document.getElementById('expiredBags').textContent = expiredCount;
-                document.getElementById('availableBags').textContent = 
-                    devices.length - parseInt(document.getElementById('inUseBags').textContent) - expiredCount;
-
-                // Fetch sensor data and wear hours for each device
-                devices.forEach(async device => {
-                    fetchLatestSensorData(device.id);
-                    
-                    // Calculate and display wear hours
-                    const wearHours = await calculateWearHours(device.id);
-                    const wearHoursElement = document.getElementById(`wear-hours-${device.id}`);
-                    if (wearHoursElement) {
-                        if (wearHours !== null) {
-                            wearHoursElement.innerHTML = `<strong style="color: #3498db;">${wearHours} hrs</strong>`;
-                        } else {
-                            wearHoursElement.textContent = 'N/A';
-                        }
-                    }
-                });
+                document.getElementById('lastUpdate').textContent = 
+                    `Last updated: ${new Date().toLocaleTimeString()}`;
 
             } catch (error) {
+                console.error('Error:', error);
                 contentDiv.innerHTML = `
                     <div class="error">
                         <strong>Error loading data:</strong> ${error.message}
@@ -584,132 +878,219 @@
             }
         }
 
+        // ===== CHECK FOR EXPIRED BAGS IN USE =====
+        function checkExpiredBagsInUse() {
+            expiredBagsInUse = [];
+            
+            allDevices.forEach(device => {
+                if (isDiscarded(device)) return;
+                
+                const openedDate = getOpenedDate(device);
+                if (!openedDate) return;
+                
+                const daysSinceOpened = calculateDaysSinceOpened(openedDate);
+                const daysRemaining = 90 - daysSinceOpened;
+                
+                if (daysRemaining < 0) {
+                    const currentUse = findCurrentUseStatement(device, allUseStatements);
+                    if (currentUse) {
+                        const bagId = device.identifier ? device.identifier[0].value : device.id;
+                        const patientName = currentUse.subject.display || currentUse.subject.reference;
+                        
+                        expiredBagsInUse.push({
+                            device: device,
+                            bagId: bagId,
+                            patientName: patientName,
+                            daysOverdue: Math.abs(daysRemaining),
+                            deviceId: device.id
+                        });
+                    }
+                }
+            });
+
+            // Render alert banner
+            const alertsDiv = document.getElementById('expiredAlerts');
+            if (expiredBagsInUse.length > 0) {
+                const alertsHTML = `
+                    <div class="alert-banner">
+                        <h2>⚠️ EXPIRED BAG ALERT (${expiredBagsInUse.length})</h2>
+                        ${expiredBagsInUse.map(exp => `
+                            <div class="alert-item">
+                                <div class="alert-info">
+                                    <strong>${exp.bagId} → ${exp.patientName}</strong>
+                                    <small>Expired ${exp.daysOverdue} days ago | Currently in use</small>
+                                </div>
+                                <div class="alert-actions">
+                                    <button class="btn btn-white btn-small" onclick="showDiscardModal('${exp.deviceId}', '${exp.bagId}', true, '${exp.patientName}')">
+                                        🗑️ Discard & End Assignment
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                alertsDiv.innerHTML = alertsHTML;
+                alertsDiv.classList.remove('hidden');
+            } else {
+                alertsDiv.classList.add('hidden');
+            }
+        }
+
+        // ===== RENDER BAGS =====
+        function renderBags() {
+            const contentDiv = document.getElementById('bagsContent');
+            
+            let filteredDevices = allDevices;
+            
+            if (currentFilter === 'active') {
+                filteredDevices = allDevices.filter(d => !isDiscarded(d));
+            } else if (currentFilter === 'discarded') {
+                filteredDevices = allDevices.filter(d => isDiscarded(d));
+            }
+
+            filteredDevices.sort((a, b) => {
+                const aId = a.identifier?.[0]?.value || '';
+                const bId = b.identifier?.[0]?.value || '';
+                return aId.localeCompare(bId);
+            });
+
+            const bagsHTML = filteredDevices.map(device => {
+                const bagId = device.identifier ? device.identifier[0].value : device.id;
+                const openedDate = getOpenedDate(device);
+                const daysSinceOpened = openedDate ? calculateDaysSinceOpened(openedDate) : null;
+                const daysRemaining = daysSinceOpened !== null ? 90 - daysSinceOpened : null;
+                const discarded = isDiscarded(device);
+                
+                const currentUse = findCurrentUseStatement(device, allUseStatements);
+
+                const history = allUseStatements
+                    .filter(us => {
+                        const deviceRef = us.device.reference;
+                        const bagIdentifier = device.identifier ? device.identifier[0].value : null;
+                        return deviceRef.includes(device.id) || (bagIdentifier && deviceRef.includes(bagIdentifier));
+                    })
+                    .sort((a, b) => new Date(b.recordedOn) - new Date(a.recordedOn));
+
+                let status = 'available';
+                let statusClass = 'status-available';
+                let cardClass = '';
+                
+                if (discarded) {
+                    status = 'discarded';
+                    statusClass = 'status-discarded';
+                } else if (daysRemaining !== null && daysRemaining < 0) {
+                    if (currentUse) {
+                        status = 'EXPIRED IN USE';
+                        statusClass = 'status-expired-in-use';
+                        cardClass = 'expired-in-use';
+                    } else {
+                        status = 'expired';
+                        statusClass = 'status-expired';
+                    }
+                } else if (currentUse) {
+                    status = 'in-use';
+                    statusClass = 'status-in-use';
+                }
+
+                let progressPercent = daysSinceOpened !== null ? (daysSinceOpened / 90) * 100 : 0;
+                progressPercent = Math.min(progressPercent, 100);
+                let progressClass = 'progress-good';
+                if (progressPercent > 75) progressClass = 'progress-danger';
+                else if (progressPercent > 50) progressClass = 'progress-warning';
+
+                let currentPatientHTML = '<span style="color: #999;">Not assigned</span>';
+                if (currentUse && currentUse.subject) {
+                    currentPatientHTML = `<strong style="color: ${daysRemaining < 0 ? '#dc3545' : '#27ae60'};">${currentUse.subject.display || currentUse.subject.reference}</strong>`;
+                }
+
+                const discardButton = !discarded ? 
+                    `<button class="btn btn-danger btn-small" onclick="event.stopPropagation(); showDiscardModal('${device.id}', '${bagId}', ${daysRemaining < 0 && currentUse ? 'true' : 'false'}, '${currentUse && currentUse.subject ? (currentUse.subject.display || currentUse.subject.reference) : ''}')">🗑️ Discard</button>` : 
+                    `<button class="btn btn-secondary btn-small" onclick="event.stopPropagation(); restoreBag('${device.id}', '${bagId}')" style="background: #28a745;">
+                        ↩️ Restore
+                    </button>`;
+
+                const historyHTML = history.length > 0 ? history.map(h => {
+                    const startDate = h.timingPeriod ? new Date(h.timingPeriod.start).toLocaleString() : 'Unknown';
+                    const endDate = h.timingPeriod && h.timingPeriod.end ? 
+                        new Date(h.timingPeriod.end).toLocaleString() : 
+                        '<strong>Currently in use</strong>';
+                    const patient = h.subject ? (h.subject.display || h.subject.reference) : 'Unknown';
+                    
+                    return `
+                        <div class="history-item">
+                            <strong>Patient:</strong> ${patient}<br>
+                            <strong>Start:</strong> ${startDate}<br>
+                            <strong>End:</strong> ${endDate}
+                        </div>
+                    `;
+                }).join('') : '<div class="history-item">No usage history</div>';
+
+                return `
+                    <div class="bag-card ${cardClass}">
+                        <div class="bag-header">
+                            <div class="bag-id" onclick="toggleHistory('${device.id}')">📦 ${bagId}</div>
+                            <div class="bag-actions">
+                                <span class="status-badge ${statusClass}">${status.toUpperCase()}</span>
+                                ${discardButton}
+                            </div>
+                        </div>
+                        <div class="bag-info">
+                            <div class="info-item">
+                                <span class="info-label">Opened Date</span>
+                                <span class="info-value">${openedDate ? new Date(openedDate).toLocaleDateString() : 'Not opened'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Days Since Opened</span>
+                                <span class="info-value">${daysSinceOpened !== null ? daysSinceOpened : 'Unknown'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Days Remaining</span>
+                                <span class="info-value" style="color: ${daysRemaining < 0 ? '#dc3545' : 'inherit'}">
+                                    ${daysRemaining !== null ? (daysRemaining < 0 ? `OVERDUE ${Math.abs(daysRemaining)}` : daysRemaining) : 'Unknown'}
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Current Patient</span>
+                                <span class="info-value">${currentPatientHTML}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Model</span>
+                                <span class="info-value">${device.modelNumber || 'N/A'}</span>
+                            </div>
+                        </div>
+                        ${!discarded ? `<div class="progress-bar">
+                            <div class="progress-fill ${progressClass}" style="width: ${progressPercent}%"></div>
+                        </div>` : ''}
+                        <div class="bag-history" id="history-${device.id}">
+                            <div class="history-title">Usage History (${history.length} sessions)</div>
+                            ${historyHTML}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            contentDiv.innerHTML = bagsHTML || '<div class="loading"><p>No bags found</p></div>';
+
+            // Update stats
+            const activeDevices = allDevices.filter(d => !isDiscarded(d));
+            const discardedCount = allDevices.filter(d => isDiscarded(d)).length;
+            const inUse = activeDevices.filter(d => findCurrentUseStatement(d, allUseStatements) !== null).length;
+            
+            const expiredCount = activeDevices.filter(d => {
+                const openedDate = getOpenedDate(d);
+                const days = openedDate ? calculateDaysSinceOpened(openedDate) : null;
+                return days !== null && days > 90;
+            }).length;
+            
+            document.getElementById('totalBags').textContent = activeDevices.length;
+            document.getElementById('inUseBags').textContent = inUse;
+            document.getElementById('availableBags').textContent = activeDevices.length - inUse;
+            document.getElementById('expiredInUseBags').textContent = expiredBagsInUse.length;
+        }
+
         function toggleHistory(deviceId) {
             const historyDiv = document.getElementById(`history-${deviceId}`);
             historyDiv.classList.toggle('show');
-        }
-
-        // ===== FETCH LATEST SENSOR DATA =====
-        async function fetchLatestSensorData(deviceId) {
-            try {
-                // Query for latest Observation for this device
-                // Use _lastUpdated for more reliable sorting
-                const response = await fetch(
-                    `${MEDPLUM_BASE_URL}/fhir/R4/Observation?subject=Device/${deviceId}&code=bag-occupancy&_sort=-_lastUpdated&_count=1`,
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${accessToken}`,
-                            'Content-Type': 'application/fhir+json'
-                        }
-                    }
-                );
-
-                if (!response.ok) {
-                    console.error('Failed to fetch sensor data:', response.status);
-                    return;
-                }
-
-                const data = await response.json();
-                console.log('Sensor data for', deviceId, ':', data);
-                
-                if (data.entry && data.entry.length > 0) {
-                    const observation = data.entry[0].resource;
-                    const occupied = observation.valueBoolean;
-                    const timestamp = new Date(observation.effectiveDateTime);
-                    const timeAgo = getTimeAgo(timestamp);
-                    
-                    console.log('Device', deviceId, '- Occupied:', occupied, 'Time:', timeAgo);
-                    
-                    // Update the sensor status display
-                    const sensorElement = document.getElementById(`sensor-${deviceId}`);
-                    if (sensorElement) {
-                        if (occupied) {
-                            sensorElement.innerHTML = '🟢 <strong style="color: #27ae60;">OCCUPIED</strong><br><span style="font-size: 11px; color: #999;">' + timeAgo + '</span>';
-                        } else {
-                            sensorElement.innerHTML = '⚪ <strong style="color: #95a5a6;">NOT OCCUPIED</strong><br><span style="font-size: 11px; color: #999;">' + timeAgo + '</span>';
-                        }
-                    } else {
-                        console.error('Could not find sensor element for device:', deviceId);
-                    }
-                } else {
-                    console.log('No observations found for device:', deviceId);
-                }
-            } catch (error) {
-                console.error('Error fetching sensor data:', error);
-            }
-        }
-
-        // ===== CALCULATE TIME AGO =====
-        function getTimeAgo(date) {
-            const seconds = Math.floor((new Date() - date) / 1000);
-            
-            if (seconds < 60) return `${seconds}s ago`;
-            if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-            if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-            return `${Math.floor(seconds / 86400)}d ago`;
-        }
-
-        // ===== CALCULATE WEAR HOURS =====
-        async function calculateWearHours(deviceId) {
-            try {
-                // Get ALL observations for this device, sorted by time
-                const response = await fetch(
-                    `${MEDPLUM_BASE_URL}/fhir/R4/Observation?subject=Device/${deviceId}&code=occupied&_sort=-date&_count=1000`,
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${accessToken}`,
-                            'Content-Type': 'application/fhir+json'
-                        }
-                    }
-                );
-
-                if (!response.ok) {
-                    throw new Error('Failed to fetch observations');
-                }
-
-                const data = await response.json();
-                
-                if (!data.entry || data.entry.length === 0) {
-                    return 0;
-                }
-
-                // Group observations by hour
-                const hourlyOccupancy = {};
-                
-                data.entry.forEach(entry => {
-                    const obs = entry.resource;
-                    const timestamp = new Date(obs.effectiveDateTime);
-                    const hourKey = `${timestamp.getFullYear()}-${timestamp.getMonth()}-${timestamp.getDate()}-${timestamp.getHours()}`;
-                    
-                    if (!hourlyOccupancy[hourKey]) {
-                        hourlyOccupancy[hourKey] = {
-                            occupied: 0,
-                            total: 0
-                        };
-                    }
-                    
-                    hourlyOccupancy[hourKey].total++;
-                    if (obs.valueBoolean) {
-                        hourlyOccupancy[hourKey].occupied++;
-                    }
-                });
-
-                // Count wear hours (hours where occupied ≥ 50% of measurements)
-                let wearHours = 0;
-                Object.values(hourlyOccupancy).forEach(hour => {
-                    const occupancyRate = hour.occupied / hour.total;
-                    // If occupied for ≥50% of the hour, count as 1 wear hour
-                    if (occupancyRate >= 0.5) {
-                        wearHours++;
-                    }
-                });
-
-                return wearHours;
-
-            } catch (error) {
-                console.error('Error calculating wear hours:', error);
-                return null;
-            }
         }
 
         // Initialize on page load
@@ -718,7 +1099,7 @@
                 await authenticate();
                 await loadData();
                 
-                // Auto-refresh every 5 seconds (faster for real-time sensor updates)
+                // Auto-refresh every 5 seconds
                 setInterval(loadData, 5000);
             } catch (error) {
                 document.getElementById('bagsContent').innerHTML = `
