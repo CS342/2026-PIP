@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mölnlycke | Usage Insights Portal</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <nav class="sidebar">
+        <div class="logo">
+            <h2>Mölnlycke</h2>
+            <span class="subtitle">Usage Insights</span>
+        </div>
+        
+        <ul class="nav-links">
+            <li class="active"><i class="fa-solid fa-chart-pie"></i> Usage Patterns</li>
+            <li><i class="fa-solid fa-file-export"></i> Raw Data Export</li>
+        </ul>
+    </nav>
+
+    <main class="main-content">
+        
+        <header class="top-bar">
+            <div class="client-selector">
+                <label>Viewing Data For:</label>
+                <select id="hospitalSelect">
+                    </select>
+            </div>
+            <div class="date-display">
+                <i class="fa-regular fa-calendar"></i> <span id="currentDate">Feb 18, 2026</span>
+            </div>
+        </header>
+
+        <section class="kpi-grid">
+            
+            <div class="kpi-card">
+                <div class="label">Total Fleet Size</div>
+                <div class="value" id="kpi-total-purchased">--</div>
+                <div class="trend">Units sold to client</div>
+            </div>
+            
+            <div class="kpi-card">
+                <div class="label">Scan Compliance</div>
+                <div class="value" id="kpi-scan-compliance">--%</div>
+                <div class="trend" id="kpi-active-count">-- scanned at least once</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="label">Avg. Re-Use Rate</div>
+                <div class="value" id="kpi-avg-scans">--</div>
+                <div class="trend">Scans per active bag</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="label">Use vs. Shelf Ratio</div>
+                <div class="value" id="kpi-utilization-ratio">--%</div>
+                <div class="trend">Active use vs. idle time</div>
+            </div>
+        </section>
+
+        <section class="insights-container">
+            
+            <div class="chart-card">
+                <div class="card-header">
+                    <h3>Sustainability Impact</h3>
+                    <span class="card-subtitle">Bags saved via multi-patient reuse</span>
+                </div>
+                <div class="chart-placeholder" id="reuseHistogram">
+                    <div class="empty-state">Select a hospital to view data</div>
+                </div>
+            </div>
+
+            <div class="table-card">
+                <div class="card-header">
+                    <h3>Detailed Bag Logs</h3>
+                </div>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Serial ID</th>
+                                <th>Batch</th>
+                                <th>First Scan</th>
+                                <th>Last Scan</th>
+                                <th>Total Scans</th>
+                                <th>Use vs. Shelf</th> 
+                                <th>Lifespan (90d)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryTableBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script src="data/mock-database.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
