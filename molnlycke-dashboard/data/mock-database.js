@@ -9,26 +9,29 @@
 
 // --- 1. CONFIGURATION: The "Story" for each hospital ---
 const CLIENTS = [
-    { 
-        id: "hosp_001", 
-        name: "Stanford Health Care", 
-        total_purchased: 350, 
-        compliance_target: 0.65, // 65% adoption
-        behavior_profile: "mixed" 
+    {
+        id: "hosp_001",
+        name: "Stanford Health Care",
+        total_purchased: 350,
+        compliance_target: 0.65,
+        behavior_profile: "mixed",
+        lat: 37.4419, lng: -122.1430  // Palo Alto, CA
     },
-    { 
-        id: "hosp_002", 
-        name: "UCSF Medical Center", 
-        total_purchased: 150, 
-        compliance_target: 0.92, // High adoption (Gold Standard)
-        behavior_profile: "hero" 
+    {
+        id: "hosp_002",
+        name: "UCSF Medical Center",
+        total_purchased: 150,
+        compliance_target: 0.92,
+        behavior_profile: "hero",
+        lat: 41.8781, lng: -87.6298   // Chicago, IL (mock spread)
     },
-    { 
-        id: "hosp_003", 
-        name: "Kaiser Permanente", 
-        total_purchased: 500, 
-        compliance_target: 0.15, // Low adoption (Problem Child)
-        behavior_profile: "villain" 
+    {
+        id: "hosp_003",
+        name: "Kaiser Permanente",
+        total_purchased: 500,
+        compliance_target: 0.15,
+        behavior_profile: "villain",
+        lat: 29.7604, lng: -95.3698   // Houston, TX (mock spread)
     }
 ];
 

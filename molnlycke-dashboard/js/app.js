@@ -1,9 +1,39 @@
+// MAP STATE
+let map = null;
+let mapMarkers = [];
+
+function initMap() {
+    map = L.map('usMap', { zoomControl: true, scrollWheelZoom: false })
+            .setView([39.5, -98.35], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+}
+
+function updateMap(selectedId) {
+    mapMarkers.forEach(m => map.removeLayer(m));
+    mapMarkers = [];
+
+    MOLNLYCKE_DB.clients.forEach(client => {
+        const bagCount = MOLNLYCKE_DB.inventory.filter(i => i.client_id === client.id).length;
+        const highlighted = selectedId === 'all' || selectedId === client.id;
+        const marker = L.circleMarker([client.lat, client.lng], {
+            radius: Math.max(10, Math.sqrt(bagCount) * 1.8),
+            fillColor: highlighted ? '#00754a' : '#aaa',
+            color: '#fff',
+            weight: 2,
+            fillOpacity: highlighted ? 0.85 : 0.35
+        }).addTo(map);
+        marker.bindPopup(`<strong>${client.name}</strong><br>${bagCount} active positioners`);
+        mapMarkers.push(marker);
+    });
+}
+
 // 1. INITIALIZE: Wait for the page to load
 document.addEventListener('DOMContentLoaded', () => {
+    initMap();
     populateHospitalSelector();
-    updateDashboard(); // Run once at start
-
-    // Listen for changes in the dropdown
+    updateDashboard();
     document.getElementById('hospitalSelect').addEventListener('change', updateDashboard);
 });
 
@@ -63,17 +93,32 @@ function updateDashboard() {
         ? ((totalActiveHours / totalPossibleHours) * 100).toFixed(1) 
         : 0;
 
+    // Expiring Soon count (<10 days remaining)
+    const today = new Date("2026-02-18");
+    const expiringSoonCount = filteredInventory.filter(item => {
+        const daysSince = Math.floor(Math.abs(today - new Date(item.scans[0])) / (1000 * 60 * 60 * 24));
+        const remaining = 90 - daysSince;
+        return remaining >= 0 && remaining < 10;
+    }).length;
+
     // --- UPDATE THE UI CARDS ---
     document.getElementById('kpi-total-purchased').textContent = totalPurchased;
     document.getElementById('kpi-scan-compliance').textContent = `${complianceRate}%`;
     document.getElementById('kpi-active-count').textContent = `${scannedCount} scanned at least once`;
     document.getElementById('kpi-avg-scans').textContent = avgScans;
     document.getElementById('kpi-utilization-ratio').textContent = `${utilRatio}%`;
+    document.getElementById('kpi-expiring-soon').textContent = expiringSoonCount;
+    document.getElementById('kpi-expiring-trend').textContent = expiringSoonCount === 1 ? '1 bag needs attention' : `${expiringSoonCount} bags need attention`;
+
+    // Bags Saved (multi-patient reuse)
+    const totalScansForSaved = filteredInventory.reduce((sum, item) => sum + item.scans.length, 0);
+    const bagsSaved = totalScansForSaved - filteredInventory.length;
+    document.getElementById('kpi-bags-saved').textContent = bagsSaved;
 
     // --- RENDER THE TABLE ---
     renderTable(filteredInventory);
-    // --- RENDER THE CHART ---
-    renderChart(filteredInventory);
+    // --- UPDATE THE MAP ---
+    updateMap(selectedId);
 }
 
 // 4. TABLE GENERATOR: Create the rows
@@ -95,48 +140,52 @@ function renderTable(items) {
         const usePercentage = ((activeHours / totalPossibleHours) * 100).toFixed(0);
 
         // Styling for the lifespan warning
-        const lifespanStyle = daysRemaining < 10 ? 'style="color: #d32f2f; font-weight: bold;"' : '';
+        const isExpiringSoon = daysRemaining >= 0 && daysRemaining < 10;
+        const rowClass = isExpiringSoon ? 'class="row-expiring"' : '';
+        const lifespanCell = isExpiringSoon
+            ? `<td style="color:#d32f2f;font-weight:bold;">⚠ ${daysRemaining} Days</td>`
+            : `<td>${daysRemaining} Days</td>`;
 
         const row = `
-            <tr>
+            <tr ${rowClass}>
                 <td><strong>${item.serial_number}</strong></td>
                 <td>${item.batch}</td>
                 <td>${firstScanDate.toLocaleDateString()}</td>
                 <td>${item.scans.length > 1 ? new Date(item.scans[item.scans.length-1]).toLocaleDateString() : 'N/A'}</td>
                 <td>${item.scans.length}</td>
                 <td>${usePercentage}% Active</td>
-                <td ${lifespanStyle}>${daysRemaining} Days</td>
+                ${lifespanCell}
             </tr>
         `;
         tbody.innerHTML += row;
     });
 }
 
-function renderChart(items) {
-    const chartContainer = document.getElementById('reuseHistogram');
-    chartContainer.innerHTML = ''; 
+function exportCSV() {
+    const selectedId = document.getElementById('hospitalSelect').value;
+    const items = selectedId === 'all'
+        ? MOLNLYCKE_DB.inventory
+        : MOLNLYCKE_DB.inventory.filter(i => i.client_id === selectedId);
 
-    const actualBagsUsed = items.length;
-    const totalPotentialWaste = items.reduce((sum, item) => sum + item.scans.length, 0);
-    const bagsSaved = totalPotentialWaste - actualBagsUsed; //
-
-    // Create a side-by-side comparison that actually makes sense
-    const data = [
-        { label: 'Bags Used', value: actualBagsUsed, color: '#00754a' },
-        { label: 'Bags Saved', value: bagsSaved, color: '#66bb6a' }
-    ];
-
-    const maxVal = Math.max(actualBagsUsed, bagsSaved, 1);
-
-    data.forEach(point => {
-        const height = (point.value / maxVal) * 100;
-        const bar = document.createElement('div');
-        bar.style.cssText = `display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end; width:40%;`;
-        bar.innerHTML = `
-            <span style="font-weight:bold; margin-bottom:5px;">${point.value}</span>
-            <div style="height:${height}%; width:100%; background-color:${point.color}; border-radius:4px 4px 0 0;"></div>
-            <span style="font-size:11px; margin-top:10px; text-align:center;">${point.label}</span>
-        `;
-        chartContainer.appendChild(bar);
+    const today = new Date("2026-02-18");
+    const rows = [['Serial ID', 'Batch', 'Client', 'First Scan', 'Last Scan', 'Total Scans', 'Days Remaining', 'Active Use Hours']];
+    items.forEach(item => {
+        const client = MOLNLYCKE_DB.clients.find(c => c.id === item.client_id);
+        const firstScan = new Date(item.scans[0]);
+        const lastScan = new Date(item.scans[item.scans.length - 1]);
+        const daysSince = Math.floor(Math.abs(today - firstScan) / (1000 * 60 * 60 * 24));
+        const daysRemaining = Math.max(0, 90 - daysSince);
+        rows.push([
+            item.serial_number, item.batch, client ? client.name : item.client_id,
+            firstScan.toLocaleDateString(), lastScan.toLocaleDateString(),
+            item.scans.length, daysRemaining, item.active_use_hours || 0
+        ]);
     });
+
+    const csv = rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `molnlycke-bag-logs-${selectedId}.csv`;
+    a.click();
 }
