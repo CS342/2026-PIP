@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --color-bg: #ffffff;
+  --color-bg-secondary: #f7f9fa;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f0f4f5;
+  
+  --color-text: #1a2b3c;
+  --color-text-secondary: #4a5e6d;
+  --color-text-muted: #8899a6;
+  
+  --color-border: #e1e8ec;
+  --color-border-light: #eef2f4;
+  
+  /* Teal/Healthcare accent */
+  --color-primary: #007a7a;
+  --color-primary-hover: #006666;
+  --color-primary-light: #e6f4f4;
+  
+  --color-success: #00856a;
+  --color-success-light: #e3f5f0;
+  --color-warning: #b87b00;
+  --color-warning-light: #fff7e6;
+  --color-danger: #c43d3d;
+  --color-danger-light: #fce8e8;
+  
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, monospace;
+  
+  --radius: 8px;
+  --radius-lg: 12px;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+  line-height: 1.6;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}

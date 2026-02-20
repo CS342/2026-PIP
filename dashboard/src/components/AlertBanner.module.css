@@ -1,0 +1,83 @@
+.banner {
+  background: linear-gradient(135deg, var(--color-danger) 0%, #a83232 100%);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  margin-bottom: 28px;
+  color: white;
+  box-shadow: var(--shadow-lg);
+}
+
+.content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.count {
+  background: white;
+  color: var(--color-danger);
+  font-weight: 700;
+  font-size: 14px;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.text {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.item {
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(4px);
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.bagId {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.arrow {
+  opacity: 0.6;
+}
+
+.patient {
+  flex: 1;
+}
+
+.days {
+  font-size: 12px;
+  opacity: 0.8;
+  background: rgba(255,255,255,0.2);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.action {
+  background: white;
+  color: var(--color-danger);
+  border: none;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}

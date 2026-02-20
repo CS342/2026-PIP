@@ -1,0 +1,27 @@
+.bar {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.value {
+  font-weight: 600;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat.danger .value {
+  color: var(--color-danger);
+}
+
+.label {
+  color: var(--color-text-muted);
+}
