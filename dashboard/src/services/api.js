@@ -72,6 +72,15 @@ export async function fetchSensorData(deviceId, code) {
   return data.entry?.[0]?.resource || null;
 }
 
+export async function fetchAllPressureReadings(deviceIds) {
+  const results = await Promise.all(
+    deviceIds.map(id => fetchSensorData(id, 'bag-occupancy').catch(() => null))
+  );
+  const map = {};
+  deviceIds.forEach((id, i) => { map[id] = results[i]; });
+  return map;
+}
+
 export async function fetchOccupancyHistory(deviceId) {
   const data = await fetchWithAuth(
     `${MEDPLUM_BASE_URL}/fhir/R4/Observation?subject=Device/${deviceId}&code=occupied&_sort=-date&_count=1000`

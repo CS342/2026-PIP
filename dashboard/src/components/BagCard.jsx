@@ -3,17 +3,21 @@ import { fetchSensorData, fetchOccupancyHistory } from '../services/api';
 import { getTimeAgo } from '../hooks/useMedplum';
 import styles from './BagCard.module.css';
 
-export function BagCard({ 
-  device, 
-  bagId, 
-  status, 
-  currentUse, 
-  daysSinceOpened, 
-  daysRemaining, 
+export function BagCard({
+  device,
+  bagId,
+  status,
+  currentUse,
+  daysSinceOpened,
+  daysRemaining,
   history,
   isDiscarded,
+  isGhostUse,
+  uniquePatients,
+  totalUses,
+  shelfDays,
   onDiscard,
-  onRestore 
+  onRestore
 }) {
   const [expanded, setExpanded] = useState(false);
   const [sensorData, setSensorData] = useState({ pressure: null, capacitance: null, wearHours: null });
@@ -61,19 +65,35 @@ export function BagCard({
     'discarded': 'Discarded'
   }[status];
 
+  const rowClass = [
+    styles.row,
+    status === 'expired-in-use' ? styles.critical : '',
+    isGhostUse ? styles.ghostUse : ''
+  ].filter(Boolean).join(' ');
+
   return (
-    <div className={`${styles.row} ${status === 'expired-in-use' ? styles.critical : ''}`}>
+    <div className={rowClass}>
       <div className={styles.main} onClick={() => setExpanded(!expanded)}>
-        <div className={styles.id}>{bagId}</div>
-        
+        <div className={styles.id}>
+          {bagId}
+          {isGhostUse && (
+            <span className={styles.ghostBadge}>⚠ Unscanned</span>
+          )}
+        </div>
+
         <div className={styles.cell}>
           <span className={`${styles.status} ${styles[status.replace('-', '')]}`}>
             {statusLabel}
           </span>
         </div>
-        
+
         <div className={styles.cell}>
-          {patientName || <span className={styles.empty}>—</span>}
+          {patientName
+            ? patientName
+            : shelfDays !== null
+              ? <span className={styles.shelf}>On shelf {shelfDays}d</span>
+              : <span className={styles.empty}>—</span>
+          }
         </div>
         
         <div className={styles.cell}>
@@ -130,14 +150,22 @@ export function BagCard({
             <div className={styles.detail}>
               <span className={styles.detailLabel}>Opened</span>
               <span className={styles.detailValue}>
-                {daysSinceOpened !== null 
+                {daysSinceOpened !== null
                   ? new Date(Date.now() - daysSinceOpened * 86400000).toLocaleDateString()
                   : '—'}
               </span>
             </div>
             <div className={styles.detail}>
-              <span className={styles.detailLabel}>Days Used</span>
-              <span className={styles.detailValue}>{daysSinceOpened ?? '—'}</span>
+              <span className={styles.detailLabel}>Times Used</span>
+              <span className={styles.detailValue}>{totalUses > 0 ? totalUses : '—'}</span>
+            </div>
+            <div className={styles.detail}>
+              <span className={styles.detailLabel}>Patients</span>
+              <span className={styles.detailValue}>{uniquePatients > 0 ? uniquePatients : '—'}</span>
+            </div>
+            <div className={styles.detail}>
+              <span className={styles.detailLabel}>Shelf Time</span>
+              <span className={styles.detailValue}>{shelfDays !== null ? `${shelfDays}d` : '—'}</span>
             </div>
             <div className={styles.detail}>
               <span className={styles.detailLabel}>Capacitance</span>

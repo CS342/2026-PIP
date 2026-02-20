@@ -21,7 +21,7 @@ import {
 import styles from './App.module.css';
 
 function App() {
-  const { devices, useStatements, loading, error, lastUpdated, loadData, discardDevice, restoreDevice } = useMedplum();
+  const { devices, useStatements, pressureMap, loading, error, lastUpdated, loadData, discardDevice, restoreDevice } = useMedplum();
   const [filter, setFilter] = useState('active');
   const [discardModal, setDiscardModal] = useState({ open: false, device: null, bagId: '', isExpired: false, patientName: '' });
 
@@ -33,13 +33,13 @@ function App() {
       const daysRemaining = daysSinceOpened !== null ? 90 - daysSinceOpened : null;
       const discarded = isDiscarded(device);
       const currentUse = findCurrentUseStatement(device, useStatements);
-      
+
       const history = useStatements.filter(us => {
         const deviceRef = us.device.reference;
         const bagIdentifier = device.identifier?.[0]?.value;
         return deviceRef.includes(device.id) || (bagIdentifier && deviceRef.includes(bagIdentifier));
       }).sort((a, b) => new Date(b.recordedOn) - new Date(a.recordedOn));
-      
+
       let status = 'available';
       if (discarded) {
         status = 'discarded';
@@ -48,10 +48,29 @@ function App() {
       } else if (currentUse) {
         status = 'in-use';
       }
-      
-      return { device, bagId, daysSinceOpened, daysRemaining, discarded, currentUse, history, status };
-    }).sort((a, b) => a.bagId.localeCompare(b.bagId));
-  }, [devices, useStatements]);
+
+      const isGhostUse = !discarded && !currentUse && pressureMap[device.id]?.valueBoolean === true;
+
+      const uniquePatients = new Set(history.map(h => h.subject?.reference).filter(Boolean)).size;
+      const totalUses = history.length;
+
+      let shelfDays = null;
+      if (!currentUse && openedDate) {
+        const completedWithEnd = history.filter(h => h.timingPeriod?.end);
+        if (completedWithEnd.length > 0) {
+          const lastEnd = new Date(completedWithEnd[0].timingPeriod.end);
+          shelfDays = Math.floor((new Date() - lastEnd) / (1000 * 60 * 60 * 24));
+        } else {
+          shelfDays = daysSinceOpened;
+        }
+      }
+
+      return { device, bagId, daysSinceOpened, daysRemaining, discarded, currentUse, history, status, isGhostUse, uniquePatients, totalUses, shelfDays };
+    }).sort((a, b) => {
+      if (a.isGhostUse !== b.isGhostUse) return a.isGhostUse ? -1 : 1;
+      return a.bagId.localeCompare(b.bagId);
+    });
+  }, [devices, useStatements, pressureMap]);
 
   const filteredDevices = useMemo(() => {
     if (filter === 'active') return processedDevices.filter(d => !d.discarded);
@@ -135,7 +154,7 @@ function App() {
         ) : (
           <BagList>
             {filteredDevices.length > 0 ? (
-              filteredDevices.map(({ device, bagId, status, currentUse, daysSinceOpened, daysRemaining, history, discarded }) => (
+              filteredDevices.map(({ device, bagId, status, currentUse, daysSinceOpened, daysRemaining, history, discarded, isGhostUse, uniquePatients, totalUses, shelfDays }) => (
                 <BagCard
                   key={device.id}
                   device={device}
@@ -146,10 +165,14 @@ function App() {
                   daysRemaining={daysRemaining}
                   history={history}
                   isDiscarded={discarded}
+                  isGhostUse={isGhostUse}
+                  uniquePatients={uniquePatients}
+                  totalUses={totalUses}
+                  shelfDays={shelfDays}
                   onDiscard={() => handleOpenDiscard(
-                    device, 
-                    bagId, 
-                    daysRemaining < 0 && currentUse, 
+                    device,
+                    bagId,
+                    daysRemaining < 0 && currentUse,
                     currentUse?.subject?.display || currentUse?.subject?.reference || ''
                   )}
                   onRestore={() => handleRestore(device)}

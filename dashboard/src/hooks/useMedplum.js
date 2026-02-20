@@ -59,6 +59,7 @@ export function getTimeAgo(date) {
 export function useMedplum() {
   const [devices, setDevices] = useState([]);
   const [useStatements, setUseStatements] = useState([]);
+  const [pressureMap, setPressureMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -67,15 +68,18 @@ export function useMedplum() {
     try {
       setLoading(true);
       setError(null);
-      
+
       await api.authenticate();
       const [devicesData, useStatementsData] = await Promise.all([
         api.fetchDevices(),
         api.fetchDeviceUseStatements()
       ]);
-      
+
+      const pressureData = await api.fetchAllPressureReadings(devicesData.map(d => d.id));
+
       setDevices(devicesData);
       setUseStatements(useStatementsData);
+      setPressureMap(pressureData);
       setLastUpdated(new Date());
     } catch (err) {
       setError(err.message);
@@ -126,6 +130,7 @@ export function useMedplum() {
   return {
     devices,
     useStatements,
+    pressureMap,
     loading,
     error,
     lastUpdated,

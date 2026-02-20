@@ -36,6 +36,31 @@
   border-left: 3px solid var(--color-danger);
 }
 
+.row.ghostUse {
+  background: linear-gradient(90deg, #fff8e1 0%, var(--color-surface) 40%);
+  border-left: 3px solid #f59e0b;
+}
+
+.ghostBadge {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 4px;
+  padding: 2px 7px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.shelf {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
 .main {
   display: grid;
   grid-template-columns: 140px 100px 1fr 180px 100px 80px 100px;
@@ -55,11 +80,18 @@
   font-weight: 600;
   font-size: 14px;
   color: var(--color-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .cell {
   font-size: 14px;
   color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .empty {
@@ -203,7 +235,7 @@
 
 .detailGrid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 24px;
   margin-bottom: 20px;
 }
