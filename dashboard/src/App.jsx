@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Header, 
   StatsCard, 
@@ -49,7 +49,7 @@ function App() {
         status = 'in-use';
       }
 
-      const isGhostUse = !discarded && !currentUse && pressureMap[device.id]?.valueBoolean === true;
+      let isGhostUse = !discarded && !currentUse && pressureMap[device.id]?.valueBoolean === true;
 
       const uniquePatients = new Set(history.map(h => h.subject?.reference).filter(Boolean)).size;
       const totalUses = history.length;
