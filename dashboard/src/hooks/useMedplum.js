@@ -122,10 +122,10 @@ export function useMedplum() {
   }, [loadData]);
 
   // Auto-refresh every 5 seconds
-  useEffect(() => {
-    const interval = setInterval(loadData, 5000);
-    return () => clearInterval(interval);
-  }, [loadData]);
+  // useEffect(() => {
+  //   const interval = setInterval(loadData, 5000);
+  //   return () => clearInterval(interval);
+  // }, [loadData]);
 
   return {
     devices,
