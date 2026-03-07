@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
 import { AppShell, ErrorBoundary, Loading, Logo, useMedplum, useMedplumProfile } from '@medplum/react';
-import { IconUser, IconDevices } from '@tabler/icons-react';
-import { Suspense } from 'react';
+import { IconUser, IconLayoutDashboard } from '@tabler/icons-react';
+import { Suspense, lazy } from 'react';
 import type { JSX } from 'react';
 import { Route, Routes } from 'react-router';
 import { PatientHistory } from './components/PatientHistory';
@@ -15,6 +15,9 @@ import { ResourcePage } from './pages/ResourcePage';
 import { ResourceCreatePage } from './pages/ResourceCreatePage';
 import { SignInPage } from './pages/SignInPage';
 import { PositionersPage } from './pages/PositionersPage';
+
+// Lazy load FleetDashboard to prevent issues during initial load
+const FleetDashboard = lazy(() => import('./pages/FleetDashboard').then(m => ({ default: m.FleetDashboard })));
 
 export function App(): JSX.Element | null {
   const medplum = useMedplum();
@@ -32,7 +35,9 @@ export function App(): JSX.Element | null {
           title: 'My Links',
           links: [
             { icon: <IconUser />, label: 'Patients', href: '/' },
-            { icon: <IconDevices />, label: 'Positioners', href: '/positioners' },
+            { icon: <IconLayoutDashboard />, label: 'Fleet Dashboard', href: '/fleet' },
+            // Old Positioners page hidden - use Fleet Dashboard instead
+            // { icon: <IconDevices />, label: 'Positioners', href: '/positioners' },
           ],
         },
       ]}
@@ -43,6 +48,7 @@ export function App(): JSX.Element | null {
             <Route path="/" element={profile ? <HomePage /> : <LandingPage />} />
             <Route path="/signin" element={<SignInPage />} />
             <Route path="/Patient/new" element={<ResourceCreatePage />} />
+            <Route path="/fleet" element={<FleetDashboard />} />
             <Route path="/positioners" element={<PositionersPage />} />
             <Route path="/Patient/:id" element={<PatientPage />}>
               <Route index element={<PatientOverview />} />

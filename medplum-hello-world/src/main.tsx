@@ -13,7 +13,10 @@ import { getConfig } from './config';
 import { startExpirationChecker } from './utils/expirationChecker';
 
 const medplum = new MedplumClient({
-  onUnauthenticated: () => (window.location.href = '/'),
+  // Don't redirect on unauthenticated - let the app handle showing sign-in page
+  onUnauthenticated: () => {
+    console.log('User is not authenticated');
+  },
   baseUrl: getConfig().baseUrl,
 });
 
