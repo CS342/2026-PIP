@@ -429,7 +429,7 @@ export function ScanPositionerModal({ opened, onClose, patient, onSuccess }: Sca
                 style={{ width: '100%', minHeight: '280px', position: 'relative', borderRadius: 8, overflow: 'hidden' }}
               />
               {!scanning && !barcode && (
-                <Button onClick={startCameraScan} fullWidth color="teal" leftSection={<IconCamera size={18} />}>
+                <Button onClick={startCameraScan} fullWidth style={{ backgroundColor: '#007a7a', color: 'white' }} leftSection={<IconCamera size={18} />}>
                   Start Camera
                 </Button>
               )}
@@ -465,7 +465,7 @@ export function ScanPositionerModal({ opened, onClose, patient, onSuccess }: Sca
               </Text>
               <FileButton onChange={handleFileUpload} accept="image/*">
                 {(props) => (
-                  <Button {...props} fullWidth loading={loading} color="teal" leftSection={<IconFolder size={18} />}>
+                  <Button {...props} fullWidth loading={loading} style={{ backgroundColor: '#007a7a', color: 'white' }} leftSection={<IconFolder size={18} />}>
                     Choose Image
                   </Button>
                 )}
@@ -511,7 +511,7 @@ export function ScanPositionerModal({ opened, onClose, patient, onSuccess }: Sca
             onClick={checkAndActivate}
             loading={loading}
             disabled={!barcode && !(activeTab === 'manual' && manualBarcode)}
-            color="teal"
+            style={{ backgroundColor: '#007a7a', color: 'white' }}
           >
             Assign Positioner
           </Button>

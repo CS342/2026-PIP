@@ -101,7 +101,7 @@ export function PositionerStatus({ patient, onRefresh }: PositionerStatusProps):
                     Expired
                   </Badge>
                 ) : (
-                  <Badge color="green" size="lg">
+                  <Badge size="lg" style={{ backgroundColor: '#007a7a', color: 'white' }}>
                     Active
                   </Badge>
                 )}
@@ -143,14 +143,14 @@ export function PositionerStatus({ patient, onRefresh }: PositionerStatusProps):
                   <Text
                     size="sm"
                     fw={600}
-                    c={p.daysRemaining < 7 ? 'red' : p.daysRemaining < 30 ? 'orange' : 'green'}
+                    style={{ color: p.daysRemaining < 7 ? '#c43d3d' : p.daysRemaining < 30 ? '#b87b00' : '#007a7a' }}
                   >
                     {p.daysRemaining} days
                   </Text>
                 </Group>
                 <Progress
                   value={(p.daysRemaining / 90) * 100}
-                  color={p.daysRemaining < 7 ? 'red' : p.daysRemaining < 30 ? 'orange' : 'green'}
+                  color={p.daysRemaining < 7 ? 'red' : p.daysRemaining < 30 ? 'orange' : '#007a7a'}
                   size="sm"
                 />
               </div>

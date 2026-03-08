@@ -38,7 +38,7 @@ export function PatientOverview(): JSX.Element {
               leftSection={<IconQrcode size={16} />}
               onClick={() => setScanModalOpened(true)}
               size="md"
-              style={{ backgroundColor: '#2e7d32', color: 'white' }}
+              style={{ backgroundColor: '#007a7a', color: 'white' }}
             >
               Scan Positioner
             </Button>

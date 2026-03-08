@@ -321,7 +321,7 @@ export function FleetScannerModal({ opened, onClose, onSuccess }: FleetScannerMo
           <Text size="xl" fw={700}>Assignment Complete!</Text>
           <Card withBorder padding="md" w="100%">
             <Stack gap="xs" align="center">
-              <Badge color="teal" size="lg">{positionerInput}</Badge>
+              <Badge size="lg" style={{ backgroundColor: '#007a7a', color: 'white' }}>{positionerInput}</Badge>
               <Text size="lg">→</Text>
               <Text fw={600}>{getPatientName(patient)}</Text>
             </Stack>
@@ -374,7 +374,7 @@ export function FleetScannerModal({ opened, onClose, onSuccess }: FleetScannerMo
             {!scanning ? (
               <Button
                 fullWidth
-                color="teal"
+                style={{ backgroundColor: '#007a7a', color: 'white' }}
                 leftSection={<IconCamera size={18} />}
                 onClick={() => startCameraScan('patient-scanner', handlePatientScan)}
               >
@@ -396,7 +396,7 @@ export function FleetScannerModal({ opened, onClose, onSuccess }: FleetScannerMo
                 style={{ flex: 1 }}
               />
               <Button
-                color="teal"
+                style={{ backgroundColor: '#007a7a', color: 'white' }}
                 onClick={() => handlePatientScan(patientInput)}
                 loading={loading}
                 disabled={!patientInput.trim()}
@@ -419,7 +419,7 @@ export function FleetScannerModal({ opened, onClose, onSuccess }: FleetScannerMo
               </Group>
             </Card>
 
-            <Alert color="teal" title="Step 2: Scan Positioner">
+            <Alert styles={{ root: { backgroundColor: '#e6f4f4', borderColor: '#007a7a' }, title: { color: '#007a7a' } }} title="Step 2: Scan Positioner">
               Now scan the positioner barcode
             </Alert>
 
@@ -431,7 +431,7 @@ export function FleetScannerModal({ opened, onClose, onSuccess }: FleetScannerMo
             {!scanning ? (
               <Button
                 fullWidth
-                color="teal"
+                style={{ backgroundColor: '#007a7a', color: 'white' }}
                 leftSection={<IconCamera size={18} />}
                 onClick={() => startCameraScan('positioner-scanner', handlePositionerScan)}
               >
@@ -453,7 +453,7 @@ export function FleetScannerModal({ opened, onClose, onSuccess }: FleetScannerMo
                 style={{ flex: 1 }}
               />
               <Button
-                color="teal"
+                style={{ backgroundColor: '#007a7a', color: 'white' }}
                 onClick={() => handlePositionerScan(positionerInput)}
                 loading={loading}
                 disabled={!positionerInput.trim()}
