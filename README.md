@@ -1,113 +1,191 @@
-# Pressure Injury Prevention Dashboard
+# Pressure Injury Prevention (PIP) System
 
-A real-time dashboard for monitoring pressure sensor data from an ESP32 device, designed to help prevent pressure injuries.
-
-
-## Quick Start
-
-### Option 1: Open Directly (Easiest)
-
-Just open the HTML file in your browser:
-
-```bash
-open public/index.html
-```
-
-Or double-click `public/index.html` in Finder.
-
-### Option 2: Firebase Hosting (For Deployment)
-
-1. Install Node.js: https://nodejs.org
-2. Install Firebase CLI:
-   ```bash
-   npm install -g firebase-tools
-   ```
-3. Login to Firebase:
-   ```bash
-   firebase login
-   ```
-4. Run locally:
-   ```bash
-   firebase serve
-   ```
-5. Deploy:
-   ```bash
-   firebase deploy
-   ```
-
-## Configuration
-
-Edit `public/index.html` and find the configuration section near the top of the `<script>`:
-
-```javascript
-// DEMO MODE - Set to true to simulate fake sensor data
-const DEMO_MODE = true;
-
-// Device filter - set to your ESP32 device ID
-const DEVICE_FILTER = "esp32-01";
-
-// Pressure thresholds (adjust based on your sensor)
-const PRESSURE_THRESHOLDS = {
-  low: 1000,
-  moderate: 2500
-};
-```
-
-### Demo Mode
-
-- `DEMO_MODE = true` — Shows simulated data (no sensor needed)
-- `DEMO_MODE = false` — Shows real data from Firebase
-
-## Firebase Setup
-
-### 1. Firestore Rules
-
-Go to [Firebase Console](https://console.firebase.google.com) → Your Project → Firestore Database → Rules, and set:
-
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
-    }
-  }
-}
-```
-
-Click **Publish** to save.
-
-### 2. Expected Data Format
-
-The dashboard reads from a `readings` collection. Each document should have:
-
-```javascript
-{
-  deviceId: "esp32-01",    // String: device identifier
-  raw: 1850,               // Number: raw ADC pressure value
-  zone: "center",          // String: sensor zone (optional)
-  ts: Timestamp            // Firestore Timestamp
-}
-```
-
-## Troubleshooting
-
-| Error | Solution |
-|-------|----------|
-| "Missing or insufficient permissions" | Update Firestore rules (see above) |
-| No data showing | Check `DEVICE_FILTER` matches your ESP32's deviceId |
-| Chart not updating | Verify ESP32 is posting to the `readings` collection |
+A healthcare application for managing fluidized positioners to help prevent pressure injuries. The system tracks positioner lifecycle (activation, assignment to patients, expiration) and integrates with Medplum EHR.
 
 ## Project Structure
 
 ```
-├── public/
-│   └── index.html      # Dashboard (all-in-one HTML/CSS/JS)
-├── functions/          # Firebase Cloud Functions (if needed)
-├── firebase.json       # Firebase configuration
-└── .firebaserc         # Firebase project settings
+├── medplum-hello-world/    # Main application (Medplum + React)
+├── hospital-scanner/       # Standalone scanner app (React + Vite)
+├── dashboard/              # Dashboard UI prototype (React)
+├── hospital-scanner.html   # Legacy HTML scanner prototype
+├── bag_sensor.ino          # ESP32 sensor firmware
+└── public/                 # Legacy pressure sensor dashboard
 ```
+
+---
+
+## Main Application: `medplum-hello-world/`
+
+The primary application built with React, TypeScript, and Medplum. Features include:
+
+- **Patient Management** — View and manage patients from Medplum EHR
+- **Positioner Fleet Dashboard** — Monitor all positioners (active, available, expired, discarded)
+- **Barcode Scanning** — Scan positioners via camera or manual entry to assign to patients
+- **Expiration Tracking** — 90-day lifecycle with automatic expiration detection
+- **Reassignment Warnings** — Alerts when reassigning a positioner from one patient to another
+
+### Getting Started
+
+1. **Install Node.js** (v22.18.0+ or v24.2.0+)
+   
+   Check your version:
+   ```bash
+   node --version
+   ```
+
+2. **Navigate to the folder**
+   ```bash
+   cd medplum-hello-world
+   ```
+
+3. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+4. **Configure environment** (optional)
+   
+   Copy the defaults file and edit as needed:
+   ```bash
+   cp .env.defaults .env
+   ```
+
+5. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+6. **Open in browser**
+   
+   Navigate to [http://localhost:3000](http://localhost:3000)
+
+### Features
+
+| Page | Description |
+|------|-------------|
+| **Patients** | List of all patients, click to view details |
+| **Patient Overview** | View patient info, active positioners, scan new positioner |
+| **Fleet Dashboard** | Overview of all positioners with stats, filters, and bulk actions |
+
+### Available Scripts
+
+```bash
+npm run dev      # Start development server
+npm run build    # Build for production
+npm run preview  # Preview production build
+npm run lint     # Run ESLint
+```
+
+---
+
+## Hospital Scanner: `hospital-scanner/`
+
+A dedicated scanning application for hospital staff to quickly assign positioners to patients. Uses a two-step workflow optimized for bedside use.
+
+### Features
+
+- **Patient Bracelet Scanning** — Scan patient QR code bracelet to identify patient
+- **Positioner Barcode Scanning** — Scan positioner barcode to assign
+- **Reassignment Warnings** — Alerts when a positioner is already assigned to another patient
+- **First-Use Detection** — Automatically records when a positioner package is first opened
+- **Days Remaining Tracking** — Shows 90-day expiration countdown
+
+### Getting Started
+
+1. **Navigate to the folder**
+   ```bash
+   cd hospital-scanner
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+4. **Open in browser**
+   
+   Navigate to [http://localhost:3001](http://localhost:3001)
+
+### Workflow
+
+1. **Scan Patient** — Scan the patient's bracelet QR code (or enter MRN manually)
+2. **Scan Positioner** — Scan the positioner barcode (or enter manually)
+3. **Confirm** — System auto-assigns with reassignment warning if needed
+
+---
+
+## Dashboard Prototype: `dashboard/`
+
+A standalone React prototype of the positioner fleet dashboard UI. This was used as a design reference and has been integrated into the main `medplum-hello-world` application.
+
+### Running the Prototype
+
+1. **Navigate to the folder**
+   ```bash
+   cd dashboard
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+4. **Open in browser**
+   
+   Navigate to [http://localhost:5173](http://localhost:5173)
+
+> **Note:** This is a standalone prototype. For the full integrated experience, use the `medplum-hello-world` application.
+
+---
+
+## Other Files
+
+### `hospital-scanner.html`
+
+Legacy standalone HTML file demonstrating the two-step barcode scanning workflow. Now replaced by the `hospital-scanner/` React application.
+
+### `bag_sensor.ino`
+
+Arduino/ESP32 firmware for the pressure sensor hardware.
+
+---
+
+## Medplum Setup
+
+This application uses [Medplum](https://www.medplum.com/) as the backend EHR system.
+
+1. **Register a Medplum project** — Follow the [Medplum tutorial](https://www.medplum.com/docs/tutorials/register)
+
+2. **Configure the app** — Update `.env` with your Medplum project credentials
+
+3. **Data Model** — The app uses:
+   - `Patient` — Patient records
+   - `Device` — Positioner devices (with barcode, opened date, expiration date)
+   - `DeviceUseStatement` — Links devices to patients (assignment records)
+
+---
+
+## Tech Stack
+
+- **Frontend:** React 19, TypeScript, Vite
+- **UI Library:** Mantine v8
+- **EHR Backend:** Medplum
+- **Icons:** Tabler Icons
+- **Barcode Scanning:** html5-qrcode
+
+---
 
 ## License
 
-MIT
+Apache 2.0 (medplum-hello-world)
