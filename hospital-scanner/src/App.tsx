@@ -1,4 +1,4 @@
-import { Container, Paper, Title, Text, Stack, Group, Badge } from '@mantine/core';
+import { Container, Paper, Title, Text, Group, Badge } from '@mantine/core';
 import { IconQrcode } from '@tabler/icons-react';
 import type { JSX } from 'react';
 import { Scanner } from './components/Scanner';
