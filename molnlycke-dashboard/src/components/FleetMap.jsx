@@ -35,7 +35,7 @@ export default function FleetMap({ selectedClient }) {
           center={[39.5, -98.35]}
           zoom={4}
           scrollWheelZoom={false}
-          style={{ height: "100%", width: "100%", borderRadius: "8px" }}
+          style={{ height: "400px", width: "100%", borderRadius: "8px" }}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'

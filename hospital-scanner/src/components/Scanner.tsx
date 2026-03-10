@@ -233,11 +233,24 @@ export function Scanner(): JSX.Element {
     }
     device = devices[0];
 
+    // Check if bag is expired (90 days from first open)
+    if (device.note && device.note.length > 0) {
+      const noteText = device.note[0].text || '';
+      const match = noteText.match(/Package opened: (\d{4}-\d{2}-\d{2}T[\d:.]+Z)/);
+      if (match) {
+        const openedDate = new Date(match[1]);
+        const daysSinceOpened = Math.ceil((Date.now() - openedDate.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysSinceOpened > 90) {
+          throw new Error(`Positioner ${barcode} is expired and cannot be assigned`);
+        }
+      }
+    }
+
     // Check for active assignment
-    const existingAssignments = await medplum.searchResources('DeviceUseStatement', {
+    const allAssignments = await medplum.searchResources('DeviceUseStatement', {
       device: `Device/${device.id}`,
-      status: 'active',
     });
+    const existingAssignments = allAssignments.filter(a => a.status === 'active');
 
     if (existingAssignments.length > 0) {
       const existingAssignment = existingAssignments[0];
