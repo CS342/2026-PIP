@@ -1,5 +1,5 @@
 // Fleet Dashboard - Positioner inventory management with teal healthcare theme
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import type { JSX } from 'react';
 import { useMedplum, useMedplumProfile } from '@medplum/react';
 import { useNavigate } from 'react-router';
@@ -11,6 +11,7 @@ import {
   type Positioner,
   type PositionerStatus,
 } from '../utils/positioner';
+import { getLatestCapacitanceReading, type SensorReading } from '../utils/sensorData';
 import { FleetScannerModal } from '../components/FleetScannerModal';
 import '../styles/fleet-dashboard.css';
 import styles from './FleetDashboard.module.css';
@@ -35,7 +36,17 @@ export function FleetDashboard(): JSX.Element {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [scanModalOpen, setScanModalOpen] = useState(false);
+  const [sensorData, setSensorData] = useState<Record<string, SensorReading | null>>({});
   const loadedRef = useRef(false);
+
+  // Load sensor data for all positioners
+  const loadSensorData = useCallback(async (positionerList: Positioner[]) => {
+    const data: Record<string, SensorReading | null> = {};
+    for (const p of positionerList) {
+      data[p.id] = await getLatestCapacitanceReading(medplum, p.id);
+    }
+    setSensorData(data);
+  }, [medplum]);
 
   const loadData = async (): Promise<void> => {
     setLoading(true);
@@ -61,6 +72,15 @@ export function FleetDashboard(): JSX.Element {
       loadData();
     }
   }, [profile]);
+
+  // Poll sensor data every 10 seconds
+  useEffect(() => {
+    if (positioners.length > 0) {
+      loadSensorData(positioners);
+      const interval = setInterval(() => loadSensorData(positioners), 10000);
+      return () => clearInterval(interval);
+    }
+  }, [positioners, loadSensorData]);
 
   // Redirect to sign in if not authenticated
   if (!profile) {
@@ -437,6 +457,24 @@ export function FleetDashboard(): JSX.Element {
                           {p.assignedAt ? p.assignedAt.toLocaleString() : '—'}
                         </span>
                       </div>
+                    </div>
+
+                    {/* Sensor Data */}
+                    <div className={styles.sensorSection}>
+                      <span className={styles.sensorTitle}>Capacitance Sensor</span>
+                      {sensorData[p.id] ? (
+                        <div className={styles.sensorData}>
+                          <span className={`${styles.sensorStatus} ${sensorData[p.id]?.touched ? styles.sensorTouched : styles.sensorNotTouched}`}>
+                            {sensorData[p.id]?.touched ? '🟡 TOUCHED' : '⚪ NOT TOUCHED'}
+                          </span>
+                          {sensorData[p.id]?.rawValue !== null && (
+                            <span className={styles.sensorRaw}>Raw: {sensorData[p.id]?.rawValue}</span>
+                          )}
+                          <span className={styles.sensorTime}>{sensorData[p.id]?.timeAgo}</span>
+                        </div>
+                      ) : (
+                        <span className={styles.sensorNoData}>No sensor data</span>
+                      )}
                     </div>
 
                     {p.currentPatient && (

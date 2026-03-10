@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: Copyright Orangebot, Inc. and Medplum contributors
 // SPDX-License-Identifier: Apache-2.0
-import { Badge, Card, Group, Stack, Text, Button, Alert, Progress, Title } from '@mantine/core';
+import { Badge, Card, Group, Stack, Text, Button, Alert, Progress, Title, Divider } from '@mantine/core';
 import { showNotification } from '@mantine/notifications';
-import { IconAlertCircle, IconX } from '@tabler/icons-react';
-import { useEffect, useState } from 'react';
+import { IconAlertCircle, IconX, IconActivity } from '@tabler/icons-react';
+import { useEffect, useState, useCallback } from 'react';
 import type { JSX } from 'react';
 import type { Patient } from '@medplum/fhirtypes';
 import { useMedplum } from '@medplum/react';
@@ -12,6 +12,7 @@ import {
   deactivatePositioner,
   type Positioner,
 } from '../utils/positioner';
+import { getLatestCapacitanceReading, type SensorReading } from '../utils/sensorData';
 
 interface PositionerStatusProps {
   patient: Patient;
@@ -23,10 +24,28 @@ export function PositionerStatus({ patient, onRefresh }: PositionerStatusProps):
   const [positioners, setPositioners] = useState<Positioner[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [sensorData, setSensorData] = useState<Record<string, SensorReading | null>>({});
+
+  const loadSensorData = useCallback(async (positionerList: Positioner[]) => {
+    const data: Record<string, SensorReading | null> = {};
+    for (const p of positionerList) {
+      data[p.id] = await getLatestCapacitanceReading(medplum, p.id);
+    }
+    setSensorData(data);
+  }, [medplum]);
 
   useEffect(() => {
     loadPositioners();
   }, [patient.id]);
+
+  // Poll sensor data every 10 seconds
+  useEffect(() => {
+    if (positioners.length > 0) {
+      loadSensorData(positioners);
+      const interval = setInterval(() => loadSensorData(positioners), 10000);
+      return () => clearInterval(interval);
+    }
+  }, [positioners, loadSensorData]);
 
   const loadPositioners = async (): Promise<void> => {
     setLoading(true);
@@ -155,6 +174,34 @@ export function PositionerStatus({ patient, onRefresh }: PositionerStatusProps):
                 />
               </div>
             )}
+
+            {/* Sensor Data */}
+            <Divider label="Live Sensor Data" labelPosition="center" />
+            <Group gap="xl">
+              <div>
+                <Text size="xs" c="dimmed" mb={4}>Capacitance Sensor</Text>
+                {sensorData[p.id] ? (
+                  <Group gap="xs">
+                    <Badge 
+                      size="lg" 
+                      color={sensorData[p.id]?.touched ? 'yellow' : 'gray'}
+                      leftSection={<IconActivity size={14} />}
+                    >
+                      {sensorData[p.id]?.touched ? 'TOUCHED' : 'NOT TOUCHED'}
+                    </Badge>
+                    <Text size="xs" c="dimmed">{sensorData[p.id]?.timeAgo}</Text>
+                  </Group>
+                ) : (
+                  <Text size="sm" c="dimmed">No sensor data</Text>
+                )}
+              </div>
+              {sensorData[p.id]?.rawValue !== null && sensorData[p.id]?.rawValue !== undefined && (
+                <div>
+                  <Text size="xs" c="dimmed" mb={4}>Raw Value</Text>
+                  <Text size="sm" fw={500}>{sensorData[p.id]?.rawValue}</Text>
+                </div>
+              )}
+            </Group>
 
             {/* Metadata */}
             <Group gap="xl">

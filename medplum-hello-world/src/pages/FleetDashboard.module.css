@@ -539,6 +539,72 @@
   color: var(--fleet-color-text-muted);
 }
 
+/* Sensor Section */
+.sensorSection {
+  border-top: 1px solid var(--fleet-color-border);
+  padding-top: 16px;
+  margin-bottom: 16px;
+}
+
+.sensorTitle {
+  font-size: 12px;
+  color: var(--fleet-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.sensorData {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: var(--fleet-color-surface);
+  border-radius: 8px;
+  border: 1px solid var(--fleet-color-border-light);
+}
+
+.sensorStatus {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 16px;
+}
+
+.sensorTouched {
+  background: #fff7e6;
+  color: #b87b00;
+}
+
+.sensorNotTouched {
+  background: var(--fleet-color-bg-secondary);
+  color: var(--fleet-color-text-muted);
+}
+
+.sensorRaw {
+  font-size: 13px;
+  color: var(--fleet-color-text-secondary);
+  font-family: var(--fleet-font-mono);
+}
+
+.sensorTime {
+  font-size: 12px;
+  color: var(--fleet-color-text-muted);
+  margin-left: auto;
+}
+
+.sensorNoData {
+  font-size: 13px;
+  color: var(--fleet-color-text-muted);
+  font-style: italic;
+  padding: 12px 16px;
+  background: var(--fleet-color-bg-secondary);
+  border-radius: 8px;
+  display: block;
+}
+
 /* Loading Spinner */
 .loadingContainer {
   display: flex;
