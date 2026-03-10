@@ -3,26 +3,26 @@
 #include <ArduinoJson.h>
 
 // ===== WIFI CREDENTIALS =====
-const char* ssid = "Eric";
-const char* password = "abcdefgh";
+const char* ssid = "";
+const char* password = "";
 
 // ===== MEDPLUM CREDENTIALS =====
 const char* medplumBaseUrl = "https://api.medplum.com";
-const char* clientId = "123e5b09-4a7a-4887-be0f-67f178eec256";
-const char* clientSecret = "4c5c8954f108473c9aff4afe2c465350f2e7895527a884b280327686db56d441";
+const char* clientId = "";
+const char* clientSecret = "";
 
 // ===== BAG CONFIGURATION =====
-const char* bagId = "BAG-006";
-const char* deviceId = "6705939c-17f1-49da-b1be-26bf227b8bfb";
+const char* bagId = "";
+const char* deviceId = "";
 
 // ===== PRESSURE SENSOR CONFIGURATION (kept for future use) =====
 const int FSR_PIN = 34;                     // GPIO pin connected to FSR sensor (ADC pin)
 const int PRESSURE_THRESHOLD = 500;         // Adjust based on sensor (0-4095 range)
 
 // ===== CAPACITIVE SENSOR CONFIGURATION =====
-const int CAP_THRESH = 600;                 // Touch threshold — lower = touched on ESP32 touch pins
-const int CAP_AVG_WINDOW = 8;              // Moving average window size
-
+const int CAP_TOUCH_DROP = 90;            // How much the value must drop to count as touched
+const int CAP_AVG_WINDOW = 8;             // Moving average window size
+float capBaseline = 0;                     // Auto-calibrating baseline
 // ===== TIMING =====
 const unsigned long SEND_INTERVAL = 10000; // Send update every 10 seconds
 
@@ -52,6 +52,7 @@ void setup() {
     capBuf[i] = v;
     capSum += v;
     delay(20);
+    capBaseline = capSum / CAP_AVG_WINDOW;
   }
 
   Serial.print("Connecting to WiFi: ");
@@ -81,13 +82,18 @@ void loop() {
   bool pressureOccupied = pressureValue > PRESSURE_THRESHOLD;
 
   // --- Capacitive sensor (moving average) ---
-  int capRaw = touchRead(T0);
-  capSum -= capBuf[capIdx];
-  capBuf[capIdx] = capRaw;
-  capSum += capRaw;
-  capIdx = (capIdx + 1) % CAP_AVG_WINDOW;
-  int capAvg = capSum / CAP_AVG_WINDOW;
-  bool capTouched = capAvg < CAP_THRESH;
+// --- Capacitive sensor (moving average + baseline detection) ---
+int capRaw = touchRead(T0);
+capSum -= capBuf[capIdx];
+capBuf[capIdx] = capRaw;
+capSum += capRaw;
+capIdx = (capIdx + 1) % CAP_AVG_WINDOW;
+int capAvg = capSum / CAP_AVG_WINDOW;
+
+bool capTouched = (capBaseline - capRaw) > CAP_TOUCH_DROP;
+if (!capTouched) {
+  capBaseline = capBaseline * 0.95 + capRaw * 0.05; // slowly drift with environment
+}
 
   // Serial output
   Serial.print("Pressure: "); Serial.print(pressureValue);
