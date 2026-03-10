@@ -8,12 +8,12 @@ const char* password = "abcdefgh";
 
 // ===== MEDPLUM CREDENTIALS =====
 const char* medplumBaseUrl = "https://api.medplum.com";
-const char* clientId = "da02ae93-04f4-48a3-a32e-3e5a96fb5bd0";
-const char* clientSecret = "419ead2a73c4a53f5e6829168042db73c3dd8a1ecc6ed37640b1dc6ac1896bd6";
+const char* clientId = "123e5b09-4a7a-4887-be0f-67f178eec256";
+const char* clientSecret = "4c5c8954f108473c9aff4afe2c465350f2e7895527a884b280327686db56d441";
 
 // ===== BAG CONFIGURATION =====
 const char* bagId = "BAG-006";
-const char* deviceId = "9d0bc31e-ca6f-4f0b-9bd0-0a687ea61059";
+const char* deviceId = "6705939c-17f1-49da-b1be-26bf227b8bfb";
 
 // ===== PRESSURE SENSOR CONFIGURATION (kept for future use) =====
 const int FSR_PIN = 34;                     // GPIO pin connected to FSR sensor (ADC pin)

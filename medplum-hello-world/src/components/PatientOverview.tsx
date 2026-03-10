@@ -9,6 +9,7 @@ import { useParams } from 'react-router';
 import type { Patient } from '@medplum/fhirtypes';
 import { ScanPositionerModal } from './ScanPositionerModal';
 import { PositionerStatus } from './PositionerStatus';
+import { PositionerHistory } from './PositionerHistory';
 
 /*
  * You can combine Medplum components with plain HTML to quickly display patient data.
@@ -48,6 +49,7 @@ export function PatientOverview(): JSX.Element {
         {patient && (
           <>
             <PositionerStatus key={refreshKey} patient={patient} onRefresh={() => setRefreshKey((prev) => prev + 1)} />
+            <PositionerHistory patient={patient} refreshKey={refreshKey} />
             <ScanPositionerModal
               opened={scanModalOpened}
               onClose={() => setScanModalOpened(false)}

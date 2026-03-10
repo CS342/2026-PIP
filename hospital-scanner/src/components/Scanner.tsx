@@ -32,8 +32,8 @@ import styles from './Scanner.module.css';
 
 // Medplum Configuration
 const MEDPLUM_BASE_URL = 'https://api.medplum.com';
-const MEDPLUM_CLIENT_ID = 'da02ae93-04f4-48a3-a32e-3e5a96fb5bd0';
-const MEDPLUM_CLIENT_SECRET = '419ead2a73c4a53f5e6829168042db73c3dd8a1ecc6ed37640b1dc6ac1896bd6';
+const MEDPLUM_CLIENT_ID = '123e5b09-4a7a-4887-be0f-67f178eec256';
+const MEDPLUM_CLIENT_SECRET = '4c5c8954f108473c9aff4afe2c465350f2e7895527a884b280327686db56d441';
 
 type ScanStep = 'patient' | 'positioner' | 'processing' | 'success';
 
@@ -78,12 +78,9 @@ export function Scanner(): JSX.Element {
   useEffect(() => {
     const initMedplum = async () => {
       try {
-        const client = new MedplumClient({
-          baseUrl: MEDPLUM_BASE_URL,
-        });
+        const client = new MedplumClient({ baseUrl: MEDPLUM_BASE_URL });
         await client.startClientLogin(MEDPLUM_CLIENT_ID, MEDPLUM_CLIENT_SECRET);
         medplumRef.current = client;
-        console.log('Medplum authenticated');
       } catch (err) {
         console.error('Failed to authenticate with Medplum:', err);
         setError('Failed to connect to Medplum. Please check credentials.');
@@ -91,6 +88,7 @@ export function Scanner(): JSX.Element {
     };
     initMedplum();
   }, []);
+
 
   // Cleanup scanner on unmount
   useEffect(() => {
