@@ -3,6 +3,17 @@
  * Generates realistic positioner usage data
  */
 
+// Seeded PRNG (mulberry32) — deterministic across reloads
+function mulberry32(seed) {
+  return function () {
+    seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const rand = mulberry32(42);
+
 const TODAY = new Date("2026-02-18");
 
 const CLIENTS = [
@@ -42,22 +53,22 @@ function generateDates(scanCount) {
   const dates = [];
   const startTimestamp = new Date("2025-11-20").getTime();
   const endTimestamp = TODAY.getTime();
-  let current = startTimestamp + Math.random() * (endTimestamp - startTimestamp);
+  let current = startTimestamp + rand() * (endTimestamp - startTimestamp);
 
   for (let i = 0; i < scanCount; i++) {
     dates.push(new Date(current).toISOString());
-    current += (2 + Math.random() * 8) * 24 * 60 * 60 * 1000;
+    current += (2 + rand() * 8) * 24 * 60 * 60 * 1000;
   }
   return dates;
 }
 
 function getScanCount(profile) {
-  const r = Math.random();
+  const r = rand();
   if (profile === "hero") {
     if (r < 0.05) return 1;
     if (r < 0.2) return 2;
     if (r < 0.4) return 3;
-    return 4 + Math.floor(Math.random() * 4);
+    return 4 + Math.floor(rand() * 4);
   } else if (profile === "villain") {
     if (r < 0.8) return 1;
     if (r < 0.95) return 2;
@@ -66,7 +77,7 @@ function getScanCount(profile) {
     if (r < 0.2) return 1;
     if (r < 0.5) return 2;
     if (r < 0.8) return 3;
-    return 4 + Math.floor(Math.random() * 2);
+    return 4 + Math.floor(rand() * 2);
   }
 }
 
@@ -77,9 +88,9 @@ function generateActiveHours(firstScan, profile) {
   const totalPossibleHours = diffDays * 24;
 
   let usePercentage;
-  if (profile === "hero") usePercentage = 0.4 + Math.random() * 0.3;
-  else if (profile === "villain") usePercentage = 0.05 + Math.random() * 0.1;
-  else usePercentage = 0.15 + Math.random() * 0.25;
+  if (profile === "hero") usePercentage = 0.4 + rand() * 0.3;
+  else if (profile === "villain") usePercentage = 0.05 + rand() * 0.1;
+  else usePercentage = 0.15 + rand() * 0.25;
 
   return Math.floor(totalPossibleHours * usePercentage);
 }
@@ -97,9 +108,9 @@ function generateInventory() {
       const scanDates = generateDates(scansNeeded);
 
       allInventory.push({
-        serial_number: `MP-${Math.floor(1000 + Math.random() * 9000)}-${client.id.slice(-2)}`,
+        serial_number: `MP-${Math.floor(1000 + rand() * 9000)}-${client.id.slice(-2)}`,
         client_id: client.id,
-        batch: Math.random() > 0.5 ? "BATCH-JAN" : "BATCH-FEB",
+        batch: rand() > 0.5 ? "BATCH-JAN" : "BATCH-FEB",
         scans: scanDates,
         active_use_hours: generateActiveHours(
           scanDates[0],

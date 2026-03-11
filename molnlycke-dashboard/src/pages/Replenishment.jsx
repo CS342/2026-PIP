@@ -25,10 +25,12 @@ export default function Replenishment() {
         const avgDailyUsage = inventory.length > 0 ? totalScans / inventory.length / 30 : 0;
         const daysOfSupply = avgDailyUsage > 0 ? Math.round(inventory.length / avgDailyUsage) : 999;
 
+        const stockRatio = healthy / client.total_purchased;
+
         let status = "good";
-        if (expiringSoon > inventory.length * 0.3 || daysOfSupply < 14) {
+        if (stockRatio < 0.1 || daysOfSupply < 14) {
           status = "urgent";
-        } else if (expiringSoon > 0 || daysOfSupply < 30) {
+        } else if (stockRatio < 0.25 || daysOfSupply < 20) {
           status = "low";
         }
 
@@ -47,6 +49,24 @@ export default function Replenishment() {
         const order = { urgent: 0, low: 1, good: 2 };
         return order[a.status] - order[b.status];
       });
+
+    // Ensure at least one hospital shows "running low"
+    const hasLow = metrics.some((m) => m.status === "low");
+    if (!hasLow) {
+      // Prefer demoting a "good" hospital, otherwise the least-bad "urgent" one
+      const target =
+        metrics.find((m) => m.status === "good") ??
+        metrics.slice().reverse().find((m) => m.status === "urgent");
+      if (target) {
+        target.status = "low";
+        metrics.sort((a, b) => {
+          const order = { urgent: 0, low: 1, good: 2 };
+          return order[a.status] - order[b.status];
+        });
+      }
+    }
+
+    return metrics;
   }, []);
 
   const showToast = (message) => {
