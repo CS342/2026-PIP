@@ -10,10 +10,11 @@ import { useMedplum } from '@medplum/react';
 import {
   getPositionersForPatient,
   deactivatePositioner,
+  getWearHours,
+  saveWearHours,
   type Positioner,
 } from '../utils/positioner';
-import { getLatestCapacitanceReading, type SensorReading } from '../utils/sensorData';
-
+import { getLatestCapacitanceReading, calculateWearHours, type SensorReading } from '../utils/sensorData';
 interface PositionerStatusProps {
   patient: Patient;
   onRefresh?: () => void;
@@ -25,6 +26,7 @@ export function PositionerStatus({ patient, onRefresh }: PositionerStatusProps):
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [sensorData, setSensorData] = useState<Record<string, SensorReading | null>>({});
+  const [wearHours, setWearHours] = useState<Record<string, number>>({});
 
   const loadSensorData = useCallback(async (positionerList: Positioner[]) => {
     const data: Record<string, SensorReading | null> = {};
@@ -33,20 +35,31 @@ export function PositionerStatus({ patient, onRefresh }: PositionerStatusProps):
     }
     setSensorData(data);
   }, [medplum]);
+  
+  const loadWearHours = useCallback(async (positionerList: Positioner[]) => {
+  const updated: Record<string, number> = {};
+  for (const p of positionerList) {
+    const calculated = await calculateWearHours(medplum, p.id);
+    await saveWearHours(medplum, p.id, calculated);
+    updated[p.id] = calculated;
+  }
+  setWearHours(updated);
+}, [medplum]);
 
   useEffect(() => {
     loadPositioners();
   }, [patient.id]);
 
   // Poll sensor data every 10 seconds
-  useEffect(() => {
-    if (positioners.length > 0) {
-      loadSensorData(positioners);
-      const interval = setInterval(() => loadSensorData(positioners), 10000);
-      return () => clearInterval(interval);
-    }
-  }, [positioners, loadSensorData]);
-
+useEffect(() => {
+  if (positioners.length > 0) {
+    loadSensorData(positioners);
+    loadWearHours(positioners);                              // ADD THIS LINE
+    const interval = setInterval(() => loadSensorData(positioners), 10000);
+    return () => clearInterval(interval);
+  }
+}, [positioners, loadSensorData, loadWearHours]);           // add loadWearHours to deps
+  
   const loadPositioners = async (): Promise<void> => {
     setLoading(true);
     try {
@@ -202,6 +215,16 @@ export function PositionerStatus({ patient, onRefresh }: PositionerStatusProps):
                 </div>
               )}
             </Group>
+            {/* Wear Hours */}
+<Divider label="Wear Tracking" labelPosition="center" />
+<Group gap="xl">
+  <div>
+    <Text size="xs" c="dimmed" mb={4}>Wear Hours</Text>
+    <Badge size="lg" style={{ backgroundColor: '#007a7a', color: 'white' }}>
+      {wearHours[p.id] ?? 0} hrs
+    </Badge>
+  </div>
+</Group>
 
             {/* Metadata */}
             <Group gap="xl">
