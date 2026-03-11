@@ -290,3 +290,63 @@ export async function scanAndActivatePositioner(
     return { success: false, error: error.message || 'Failed to activate positioner' };
   }
 }
+// ============================================================================
+// WEAR HOURS
+// ============================================================================
+
+/**
+ * Get the stored cumulative wear hours for a positioner device from Medplum.
+ * Stored as an Observation with code 'wear-hours'.
+ */
+export async function getWearHours(
+  medplum: MedplumClient,
+  deviceId: string
+): Promise<number> {
+  try {
+    const observations = await medplum.searchResources('Observation', {
+      subject: `Device/${deviceId}`,
+      code: 'wear-hours',
+      _sort: '-_lastUpdated',
+      _count: '1',
+    });
+    if (observations.length === 0) return 0;
+    return (observations[0] as import('@medplum/fhirtypes').Observation).valueInteger ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Save (upsert) cumulative wear hours for a positioner device in Medplum.
+ */
+export async function saveWearHours(
+  medplum: MedplumClient,
+  deviceId: string,
+  hours: number
+): Promise<void> {
+  try {
+    const existing = await medplum.searchResources('Observation', {
+      subject: `Device/${deviceId}`,
+      code: 'wear-hours',
+      _sort: '-_lastUpdated',
+      _count: '1',
+    });
+
+    const obs: import('@medplum/fhirtypes').Observation = {
+      resourceType: 'Observation',
+      status: 'final',
+      code: { coding: [{ code: 'wear-hours', display: 'Wear Hours' }] },
+      subject: { reference: `Device/${deviceId}` },
+      valueInteger: hours,
+      effectiveDateTime: new Date().toISOString(),
+    };
+
+    if (existing.length > 0 && existing[0].id) {
+      await medplum.updateResource({ ...obs, id: existing[0].id });
+    } else {
+      await medplum.createResource(obs);
+    }
+  } catch (error) {
+    console.error('Error saving wear hours:', error);
+  }
+}
