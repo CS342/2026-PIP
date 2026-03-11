@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchSensorData, fetchOccupancyHistory } from '../services/api';
+import { fetchCapacitanceReading, calculateWearHours, saveWearHours } from '../services/api';
 import { getTimeAgo } from '../hooks/useMedplum';
 import styles from './BagCard.module.css';
 
@@ -25,28 +25,12 @@ export function BagCard({
   useEffect(() => {
     async function loadSensorData() {
       try {
-        const [pressure, capacitance, occupancyHistory] = await Promise.all([
-          fetchSensorData(device.id, 'bag-occupancy'),
-          fetchSensorData(device.id, 'bag-capacitance'),
-          fetchOccupancyHistory(device.id)
+        const [capacitance, hours] = await Promise.all([
+          fetchCapacitanceReading(device.id),
+          calculateWearHours(device.id)
         ]);
-        
-        let wearHours = 0;
-        if (occupancyHistory.length > 0) {
-          const hourlyOccupancy = {};
-          occupancyHistory.forEach(obs => {
-            const ts = new Date(obs.effectiveDateTime);
-            const key = `${ts.getFullYear()}-${ts.getMonth()}-${ts.getDate()}-${ts.getHours()}`;
-            if (!hourlyOccupancy[key]) hourlyOccupancy[key] = { occupied: 0, total: 0 };
-            hourlyOccupancy[key].total++;
-            if (obs.valueBoolean) hourlyOccupancy[key].occupied++;
-          });
-          Object.values(hourlyOccupancy).forEach(hour => {
-            if (hour.occupied / hour.total >= 0.5) wearHours++;
-          });
-        }
-        
-        setSensorData({ pressure, capacitance, wearHours });
+        await saveWearHours(device.id, hours);
+        setSensorData({ capacitance, wearHours: hours });
       } catch (e) {
         console.error('Error loading sensor data:', e);
       }

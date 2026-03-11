@@ -629,7 +629,7 @@
   .tableHeader, .rowMain {
     grid-template-columns: 120px 90px 1fr 140px 100px;
   }
-  
+
   .tableHeader > :nth-child(5),
   .rowMain > :nth-child(5) {
     display: none;

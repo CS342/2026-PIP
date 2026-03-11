@@ -6,6 +6,8 @@ import {
   fetchAllSensorData,
   discardPositioner,
   deactivatePositioner,
+  calculateWearHours,
+  saveWearHours,
 } from './services/api';
 import './styles/fleet-dashboard.css';
 import styles from './App.module.css';
@@ -18,12 +20,23 @@ function App() {
   const [expandedId, setExpandedId] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
   const [sensorData, setSensorData] = useState({});
+  const [wearHoursData, setWearHoursData] = useState({});
   const loadedRef = useRef(false);
 
   // Load sensor data for all positioners
   const loadSensorData = useCallback(async (positionerList) => {
     const data = await fetchAllSensorData(positionerList);
     setSensorData(data);
+  }, []);
+
+  const loadWearHours = useCallback(async (positionerList) => {
+    const results = {};
+    for (const p of positionerList) {
+      const hours = await calculateWearHours(p.id);
+      results[p.id] = hours;
+      saveWearHours(p.id, hours);
+    }
+    setWearHoursData(results);
   }, []);
 
   const loadData = useCallback(async () => {
@@ -35,12 +48,13 @@ function App() {
       setLastUpdated(new Date());
       // Load sensor data after positioners
       loadSensorData(data);
+      loadWearHours(data);
     } catch (error) {
       console.error('Error loading positioners:', error);
     } finally {
       setLoading(false);
     }
-  }, [loadSensorData]);
+  }, [loadSensorData, loadWearHours]);
 
   // Initial load
   useEffect(() => {
@@ -418,6 +432,16 @@ function App() {
                       ) : (
                         <span className={styles.sensorNoData}>No sensor data</span>
                       )}
+                    </div>
+
+                    {/* Wear Tracking */}
+                    <div className={styles.sensorSection}>
+                      <span className={styles.sensorTitle}>Wear Tracking</span>
+                      <div className={styles.sensorData}>
+                        <span className={styles.sensorStatus} style={{ backgroundColor: '#007a7a', color: 'white' }}>
+                          {wearHoursData[p.id] ?? 0} hrs
+                        </span>
+                      </div>
                     </div>
 
                     {p.currentPatient && (

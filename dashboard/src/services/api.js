@@ -57,6 +57,20 @@ async function putWithAuth(url, body) {
   return response.json();
 }
 
+async function postWithAuth(url, body) {
+  if (!accessToken) await authenticate();
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/fhir+json'
+    },
+    body: JSON.stringify(body)
+  });
+  if (!response.ok) throw new Error(`API Error: ${response.status}`);
+  return response.json();
+}
+
 // ============================================================================
 // DATA MODEL (matches medplum-hello-world/src/utils/positioner.ts)
 // ============================================================================
@@ -219,4 +233,95 @@ export async function discardPositioner(device) {
 // Deactivate (unassign) a positioner — complete assignments only
 export async function deactivatePositioner(device) {
   await completeActiveStatements(device.id);
+}
+
+// ============================================================================
+// WEAR HOURS (matches medplum-hello-world algorithm)
+// ============================================================================
+
+export async function calculateWearHours(deviceId) {
+  try {
+    const data = await fetchWithAuth(
+      `${MEDPLUM_BASE_URL}/fhir/R4/Observation?subject=Device/${deviceId}&code=bag-capacitance&_sort=date&_count=1000`
+    );
+
+    const observations = data.entry ? data.entry.map(e => e.resource) : [];
+    if (observations.length === 0) return 0;
+
+    const hourBuckets = {};
+
+    for (const obs of observations) {
+      const touched = obs.valueBoolean ?? false;
+      const timestamp = obs.effectiveDateTime ? new Date(obs.effectiveDateTime) : null;
+      if (!timestamp) continue;
+
+      const hourKey = timestamp.toISOString().slice(0, 13); // "2024-01-15T10"
+      if (!hourBuckets[hourKey]) {
+        hourBuckets[hourKey] = { touchedMinutes: 0, lastTouchedTime: null };
+      }
+
+      if (touched) {
+        const bucket = hourBuckets[hourKey];
+        if (bucket.lastTouchedTime) {
+          const minutesDiff = Math.min(
+            (timestamp.getTime() - bucket.lastTouchedTime.getTime()) / 60000,
+            10
+          );
+          bucket.touchedMinutes += minutesDiff;
+        } else {
+          bucket.touchedMinutes += 1;
+        }
+        bucket.lastTouchedTime = timestamp;
+      } else {
+        hourBuckets[hourKey].lastTouchedTime = null;
+      }
+    }
+
+    return Object.values(hourBuckets).filter(b => b.touchedMinutes >= 30).length;
+  } catch (error) {
+    console.error('Error calculating wear hours:', error);
+    return 0;
+  }
+}
+
+export async function getWearHours(deviceId) {
+  try {
+    const data = await fetchWithAuth(
+      `${MEDPLUM_BASE_URL}/fhir/R4/Observation?subject=Device/${deviceId}&code=wear-hours&_sort=-_lastUpdated&_count=1`
+    );
+    const observations = data.entry ? data.entry.map(e => e.resource) : [];
+    if (observations.length === 0) return 0;
+    return observations[0].valueInteger ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+export async function saveWearHours(deviceId, hours) {
+  try {
+    const data = await fetchWithAuth(
+      `${MEDPLUM_BASE_URL}/fhir/R4/Observation?subject=Device/${deviceId}&code=wear-hours&_sort=-_lastUpdated&_count=1`
+    );
+    const existing = data.entry ? data.entry.map(e => e.resource) : [];
+
+    const obs = {
+      resourceType: 'Observation',
+      status: 'final',
+      code: { coding: [{ code: 'wear-hours', display: 'Wear Hours' }] },
+      subject: { reference: `Device/${deviceId}` },
+      valueInteger: hours,
+      effectiveDateTime: new Date().toISOString(),
+    };
+
+    if (existing.length > 0 && existing[0].id) {
+      await putWithAuth(
+        `${MEDPLUM_BASE_URL}/fhir/R4/Observation/${existing[0].id}`,
+        { ...obs, id: existing[0].id }
+      );
+    } else {
+      await postWithAuth(`${MEDPLUM_BASE_URL}/fhir/R4/Observation`, obs);
+    }
+  } catch (error) {
+    console.error('Error saving wear hours:', error);
+  }
 }
