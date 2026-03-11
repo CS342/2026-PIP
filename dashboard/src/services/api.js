@@ -117,12 +117,7 @@ export async function fetchAllPositioners() {
   const data = await fetchWithAuth(`${MEDPLUM_BASE_URL}/fhir/R4/Device?_count=200`);
   const devices = data.entry ? data.entry.map(e => e.resource) : [];
   
-  // Filter to only positioner devices
-  const positioners = devices.filter(device =>
-    device.type?.coding?.some(coding => coding.code === 'fluidized-positioner')
-  );
-  
-  return positioners.map(deviceToPositioner);
+  return devices.map(deviceToPositioner);
 }
 
 // Fetch capacitance sensor data
