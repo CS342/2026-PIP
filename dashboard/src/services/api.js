@@ -1,14 +1,12 @@
 // Medplum API Service - Standalone positioner management
-const MEDPLUM_BASE_URL = 'https://api.medplum.com';
-const MEDPLUM_CLIENT_ID = 'da02ae93-04f4-48a3-a32e-3e5a96fb5bd0';
-const MEDPLUM_CLIENT_SECRET = '419ead2a73c4a53f5e6829168042db73c3dd8a1ecc6ed37640b1dc6ac1896bd6';
+// Matches medplum-hello-world data model exactly
 
-const EXTENSION_URLS = {
-  openedAt: 'https://example.com/fhir/positioner-opened-at',
-  expiresAt: 'https://example.com/fhir/positioner-expires-at',
-  currentPatient: 'https://example.com/fhir/current-patient',
-  assignedAt: 'https://example.com/fhir/assigned-at',
-};
+// Medplum Configuration - MUST match hospital-scanner and medplum-hello-world
+const MEDPLUM_BASE_URL = 'https://api.medplum.com';
+const MEDPLUM_CLIENT_ID = '123e5b09-4a7a-4887-be0f-67f178eec256';
+const MEDPLUM_CLIENT_SECRET = '4c5c8954f108473c9aff4afe2c465350f2e7895527a884b280327686db56d441';
+
+const EXPIRATION_DAYS = 90;
 
 let accessToken = null;
 
@@ -59,46 +57,49 @@ async function putWithAuth(url, body) {
   return response.json();
 }
 
-// Get extension value from Device
-function getExtension(device, url) {
-  return device.extension?.find(ext => ext.url === url);
+// ============================================================================
+// DATA MODEL (matches medplum-hello-world/src/utils/positioner.ts)
+// ============================================================================
+
+// Parse openedAt from Device.note (format: "Package opened: <ISO date>")
+function parseOpenedAt(device) {
+  const noteText = device.note?.[0]?.text || '';
+  const match = noteText.match(/Package opened: (\d{4}-\d{2}-\d{2}T[\d:.]+Z)/);
+  if (match) return new Date(match[1]);
+  return null;
 }
 
-function getDateTimeExtension(device, url) {
-  const ext = getExtension(device, url);
-  return ext?.valueDateTime ? new Date(ext.valueDateTime) : null;
+function calculateExpirationDate(openedAt) {
+  const expiresAt = new Date(openedAt);
+  expiresAt.setDate(expiresAt.getDate() + EXPIRATION_DAYS);
+  return expiresAt;
 }
 
-function getReferenceExtension(device, url) {
-  const ext = getExtension(device, url);
-  return ext?.valueReference || null;
-}
-
-// Convert Device to Positioner object
-export function deviceToPositioner(device) {
-  const openedAt = getDateTimeExtension(device, EXTENSION_URLS.openedAt);
-  const expiresAt = getDateTimeExtension(device, EXTENSION_URLS.expiresAt);
+// Convert Device + DeviceUseStatement to Positioner object
+function deviceToPositioner(device, activeStatement = null) {
+  const openedAt = parseOpenedAt(device);
+  const expiresAt = openedAt ? calculateExpirationDate(openedAt) : null;
   const now = new Date();
-  
-  // Calculate days remaining
+
   let daysRemaining = null;
   if (expiresAt) {
-    daysRemaining = Math.max(0, Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
-    if (now >= expiresAt) {
-      daysRemaining = -Math.ceil((now.getTime() - expiresAt.getTime()) / (1000 * 60 * 60 * 24));
-    }
+    daysRemaining = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   }
-  
-  // Determine status
+
   let status = 'available';
   if (device.status === 'inactive') {
     status = 'discarded';
   } else if (expiresAt && now >= expiresAt) {
     status = 'expired';
-  } else if (getReferenceExtension(device, EXTENSION_URLS.currentPatient)) {
+  } else if (activeStatement) {
     status = 'active';
   }
-  
+
+  const currentPatient = activeStatement?.subject || null;
+  const assignedAt = activeStatement?.timingPeriod?.start 
+    ? new Date(activeStatement.timingPeriod.start) 
+    : null;
+
   return {
     id: device.id || '',
     barcode: device.identifier?.[0]?.value || '',
@@ -106,26 +107,55 @@ export function deviceToPositioner(device) {
     openedAt,
     expiresAt,
     daysRemaining,
-    currentPatient: getReferenceExtension(device, EXTENSION_URLS.currentPatient),
-    assignedAt: getDateTimeExtension(device, EXTENSION_URLS.assignedAt),
+    currentPatient,
+    assignedAt,
     device,
+    activeStatement,
   };
 }
 
-// Fetch all positioners
+// ============================================================================
+// POSITIONER FETCHING (matches medplum-hello-world)
+// ============================================================================
+
 export async function fetchAllPositioners() {
-  const data = await fetchWithAuth(`${MEDPLUM_BASE_URL}/fhir/R4/Device?_count=200`);
-  const devices = data.entry ? data.entry.map(e => e.resource) : [];
-  
-  // Filter to only positioner devices
-  const positioners = devices.filter(device =>
-    device.type?.coding?.some(coding => coding.code === 'fluidized-positioner')
+  // Fetch all Device resources
+  const deviceData = await fetchWithAuth(`${MEDPLUM_BASE_URL}/fhir/R4/Device?_count=500`);
+  const devices = deviceData.entry ? deviceData.entry.map(e => e.resource) : [];
+
+  // Fetch all DeviceUseStatement resources
+  const stmtData = await fetchWithAuth(`${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement?_count=500`);
+  const allStatements = stmtData.entry ? stmtData.entry.map(e => e.resource) : [];
+  const activeStatements = allStatements.filter(s => s.status === 'active');
+
+  // Map device id -> active statement
+  const statementByDevice = {};
+  for (const stmt of activeStatements) {
+    const deviceRef = stmt.device?.reference;
+    if (deviceRef) {
+      const deviceId = deviceRef.replace('Device/', '');
+      statementByDevice[deviceId] = stmt;
+    }
+  }
+
+  // Convert to Positioner objects
+  return devices.map(device => 
+    deviceToPositioner(device, statementByDevice[device.id] || null)
   );
-  
-  return positioners.map(deviceToPositioner);
 }
 
-// Fetch capacitance sensor data
+// ============================================================================
+// SENSOR DATA (capacitance readings)
+// ============================================================================
+
+function getTimeAgo(date) {
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86400)}d ago`;
+}
+
 export async function fetchCapacitanceReading(deviceId) {
   try {
     const data = await fetchWithAuth(
@@ -153,7 +183,6 @@ export async function fetchCapacitanceReading(deviceId) {
   }
 }
 
-// Fetch all sensor data for positioners
 export async function fetchAllSensorData(positioners) {
   const results = {};
   for (const p of positioners) {
@@ -162,39 +191,35 @@ export async function fetchAllSensorData(positioners) {
   return results;
 }
 
-// Discard a positioner
+// ============================================================================
+// POSITIONER ACTIONS
+// ============================================================================
+
 export async function discardPositioner(device) {
-  // Remove patient assignment and mark as inactive
+  // Mark device as inactive
   const updated = {
     ...device,
     status: 'inactive',
-    extension: device.extension?.filter(ext => 
-      ext.url !== EXTENSION_URLS.currentPatient && 
-      ext.url !== EXTENSION_URLS.assignedAt
-    ) || []
   };
-  
   return putWithAuth(`${MEDPLUM_BASE_URL}/fhir/R4/Device/${device.id}`, updated);
 }
 
-// Deactivate (unassign) a positioner
 export async function deactivatePositioner(device) {
-  const updated = {
-    ...device,
-    extension: device.extension?.filter(ext => 
-      ext.url !== EXTENSION_URLS.currentPatient && 
-      ext.url !== EXTENSION_URLS.assignedAt
-    ) || []
-  };
+  // Find and complete active DeviceUseStatements
+  const stmtData = await fetchWithAuth(
+    `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement?device=Device/${device.id}&_count=100`
+  );
+  const statements = stmtData.entry ? stmtData.entry.map(e => e.resource) : [];
   
-  return putWithAuth(`${MEDPLUM_BASE_URL}/fhir/R4/Device/${device.id}`, updated);
-}
-
-// Time ago helper
-function getTimeAgo(date) {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return `${seconds}s ago`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  return `${Math.floor(seconds / 86400)}d ago`;
+  for (const stmt of statements.filter(s => s.status === 'active')) {
+    const now = new Date().toISOString();
+    const updated = {
+      ...stmt,
+      status: 'completed',
+      timingPeriod: { ...stmt.timingPeriod, end: now },
+    };
+    await putWithAuth(`${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement/${stmt.id}`, updated);
+  }
+  
+  return device;
 }
