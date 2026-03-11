@@ -20,7 +20,7 @@ export async function authenticate() {
       client_secret: MEDPLUM_CLIENT_SECRET
     })
   });
-  
+
   if (!response.ok) throw new Error('Authentication failed');
   const data = await response.json();
   accessToken = data.access_token;
@@ -29,21 +29,21 @@ export async function authenticate() {
 
 async function fetchWithAuth(url) {
   if (!accessToken) await authenticate();
-  
+
   const response = await fetch(url, {
     headers: {
       'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/fhir+json'
     }
   });
-  
+
   if (!response.ok) throw new Error(`API Error: ${response.status}`);
   return response.json();
 }
 
 async function putWithAuth(url, body) {
   if (!accessToken) await authenticate();
-  
+
   const response = await fetch(url, {
     method: 'PUT',
     headers: {
@@ -52,7 +52,7 @@ async function putWithAuth(url, body) {
     },
     body: JSON.stringify(body)
   });
-  
+
   if (!response.ok) throw new Error(`API Error: ${response.status}`);
   return response.json();
 }
@@ -61,7 +61,7 @@ async function putWithAuth(url, body) {
 // DATA MODEL (matches medplum-hello-world/src/utils/positioner.ts)
 // ============================================================================
 
-// Parse openedAt from Device.note (format: "Package opened: <ISO date>")
+// Parse openedAt from note text: "Package opened: 2026-02-04T04:08:49.992Z"
 function parseOpenedAt(device) {
   const noteText = device.note?.[0]?.text || '';
   const match = noteText.match(/Package opened: (\d{4}-\d{2}-\d{2}T[\d:.]+Z)/);
@@ -69,16 +69,17 @@ function parseOpenedAt(device) {
   return null;
 }
 
-function calculateExpirationDate(openedAt) {
-  const expiresAt = new Date(openedAt);
-  expiresAt.setDate(expiresAt.getDate() + EXPIRATION_DAYS);
-  return expiresAt;
+// Check for legacy discarded bags (old dashboard added a DISCARDED note instead of setting status=inactive)
+function isDiscardedByNote(device) {
+  return (device.note || []).some(n => n.text?.includes('DISCARDED:'));
 }
 
-// Convert Device + DeviceUseStatement to Positioner object
-function deviceToPositioner(device, activeStatement = null) {
+// Convert Device + optional active DeviceUseStatement to Positioner object
+export function deviceToPositioner(device, activeStatement = null) {
   const openedAt = parseOpenedAt(device);
-  const expiresAt = openedAt ? calculateExpirationDate(openedAt) : null;
+  const expiresAt = openedAt
+    ? new Date(openedAt.getTime() + EXPIRATION_DAYS * 24 * 60 * 60 * 1000)
+    : null;
   const now = new Date();
 
   let daysRemaining = null;
@@ -87,7 +88,7 @@ function deviceToPositioner(device, activeStatement = null) {
   }
 
   let status = 'available';
-  if (device.status === 'inactive') {
+  if (device.status === 'inactive' || isDiscardedByNote(device)) {
     status = 'discarded';
   } else if (expiresAt && now >= expiresAt) {
     status = 'expired';
@@ -96,8 +97,8 @@ function deviceToPositioner(device, activeStatement = null) {
   }
 
   const currentPatient = activeStatement?.subject || null;
-  const assignedAt = activeStatement?.timingPeriod?.start 
-    ? new Date(activeStatement.timingPeriod.start) 
+  const assignedAt = activeStatement?.timingPeriod?.start
+    ? new Date(activeStatement.timingPeriod.start)
     : null;
 
   return {
@@ -118,38 +119,34 @@ function deviceToPositioner(device, activeStatement = null) {
 // POSITIONER FETCHING (matches medplum-hello-world)
 // ============================================================================
 
+// Fetch all positioners — Devices + DeviceUseStatements in parallel
 export async function fetchAllPositioners() {
-  // Fetch all Device resources
-  const deviceData = await fetchWithAuth(`${MEDPLUM_BASE_URL}/fhir/R4/Device?_count=500`);
-  const devices = deviceData.entry ? deviceData.entry.map(e => e.resource) : [];
+  const [deviceData, stmtData] = await Promise.all([
+    fetchWithAuth(`${MEDPLUM_BASE_URL}/fhir/R4/Device?_count=500`),
+    fetchWithAuth(`${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement?_count=500`),
+  ]);
 
-  // Fetch all DeviceUseStatement resources
-  const stmtData = await fetchWithAuth(`${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement?_count=500`);
+  const devices = deviceData.entry ? deviceData.entry.map(e => e.resource) : [];
   const allStatements = stmtData.entry ? stmtData.entry.map(e => e.resource) : [];
   const activeStatements = allStatements.filter(s => s.status === 'active');
 
-  // Map device id -> active statement
-  const statementByDevice = {};
+  // Build map: deviceId -> active statement
+  const stmtByDevice = {};
   for (const stmt of activeStatements) {
-    const deviceRef = stmt.device?.reference;
-    if (deviceRef) {
-      const deviceId = deviceRef.replace('Device/', '');
-      statementByDevice[deviceId] = stmt;
-    }
+    const deviceId = stmt.device?.reference?.split('/').pop();
+    if (deviceId) stmtByDevice[deviceId] = stmt;
   }
 
-  // Convert to Positioner objects
-  return devices.map(device => 
-    deviceToPositioner(device, statementByDevice[device.id] || null)
-  );
+  return devices.map(device => deviceToPositioner(device, stmtByDevice[device.id] || null));
 }
 
 // ============================================================================
 // SENSOR DATA (capacitance readings)
 // ============================================================================
 
+// Time ago helper
 function getTimeAgo(date) {
-  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
   if (seconds < 60) return `${seconds}s ago`;
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
@@ -161,14 +158,13 @@ export async function fetchCapacitanceReading(deviceId) {
     const data = await fetchWithAuth(
       `${MEDPLUM_BASE_URL}/fhir/R4/Observation?subject=Device/${deviceId}&code=bag-capacitance&_sort=-_lastUpdated&_count=1`
     );
-    
+
     if (!data.entry || data.entry.length === 0) return null;
-    
+
     const obs = data.entry[0].resource;
     const touched = obs.valueBoolean ?? false;
     const timestamp = obs.effectiveDateTime ? new Date(obs.effectiveDateTime) : new Date();
-    
-    // Get raw value from component
+
     let rawValue = null;
     if (obs.component && obs.component.length > 0) {
       const capComponent = obs.component.find(c => c.code?.text === 'Capacitance Average Reading');
@@ -176,7 +172,7 @@ export async function fetchCapacitanceReading(deviceId) {
         rawValue = capComponent.valueQuantity.value;
       }
     }
-    
+
     return { touched, rawValue, timestamp, timeAgo: getTimeAgo(timestamp) };
   } catch {
     return null;
@@ -195,31 +191,32 @@ export async function fetchAllSensorData(positioners) {
 // POSITIONER ACTIONS
 // ============================================================================
 
-export async function discardPositioner(device) {
-  // Mark device as inactive
-  const updated = {
-    ...device,
-    status: 'inactive',
-  };
-  return putWithAuth(`${MEDPLUM_BASE_URL}/fhir/R4/Device/${device.id}`, updated);
-}
-
-export async function deactivatePositioner(device) {
-  // Find and complete active DeviceUseStatements
-  const stmtData = await fetchWithAuth(
-    `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement?device=Device/${device.id}&_count=100`
+// Complete active DeviceUseStatements for a device
+async function completeActiveStatements(deviceId) {
+  const data = await fetchWithAuth(
+    `${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement?device=Device/${deviceId}&status=active&_count=50`
   );
-  const statements = stmtData.entry ? stmtData.entry.map(e => e.resource) : [];
-  
-  for (const stmt of statements.filter(s => s.status === 'active')) {
-    const now = new Date().toISOString();
-    const updated = {
+  const statements = data.entry ? data.entry.map(e => e.resource) : [];
+  const now = new Date().toISOString();
+  for (const stmt of statements) {
+    await putWithAuth(`${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement/${stmt.id}`, {
       ...stmt,
       status: 'completed',
       timingPeriod: { ...stmt.timingPeriod, end: now },
-    };
-    await putWithAuth(`${MEDPLUM_BASE_URL}/fhir/R4/DeviceUseStatement/${stmt.id}`, updated);
+    });
   }
-  
-  return device;
+}
+
+// Discard a positioner — complete assignments then mark device inactive
+export async function discardPositioner(device) {
+  await completeActiveStatements(device.id);
+  return putWithAuth(`${MEDPLUM_BASE_URL}/fhir/R4/Device/${device.id}`, {
+    ...device,
+    status: 'inactive',
+  });
+}
+
+// Deactivate (unassign) a positioner — complete assignments only
+export async function deactivatePositioner(device) {
+  await completeActiveStatements(device.id);
 }
