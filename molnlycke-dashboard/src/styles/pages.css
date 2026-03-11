@@ -61,7 +61,8 @@
   display: grid;
   grid-template-columns: 1fr 2fr;
   gap: var(--space-lg);
-  min-height: 520px;
+  flex: 1;
+  min-height: 0;
 }
 
 @media (max-width: 1024px) {

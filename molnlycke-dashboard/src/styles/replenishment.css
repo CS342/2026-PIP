@@ -1,7 +1,10 @@
 /* Replenishment Page - Clean & Simple */
 
 .replenishment-page {
-  max-width: 900px;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .page-intro {
