@@ -125,3 +125,62 @@ export async function getAllSensorData(
 
   return { capacitance, occupancy };
 }
+/**
+ * Calculate wear hours for a device based on historical capacitance readings.
+ * An hour counts if touched=true for at least 30 minutes within that hour.
+ */
+export async function calculateWearHours(
+  medplum: MedplumClient,
+  deviceId: string
+): Promise<number> {
+  try {
+    const observations = await medplum.searchResources('Observation', {
+      subject: `Device/${deviceId}`,
+      code: 'bag-capacitance',
+      _sort: 'date',
+      _count: '1000',
+    });
+
+    if (observations.length === 0) return 0;
+
+    // Group readings by hour bucket (e.g. "2024-01-15T10")
+    const hourBuckets: Record<string, { touchedMinutes: number; lastTouchedTime: Date | null }> = {};
+
+    for (const obs of observations as Observation[]) {
+      const touched = obs.valueBoolean ?? false;
+      const timestamp = obs.effectiveDateTime ? new Date(obs.effectiveDateTime) : null;
+      if (!timestamp) continue;
+
+      // Round down to the hour
+      const hourKey = timestamp.toISOString().slice(0, 13); // "2024-01-15T10"
+      if (!hourBuckets[hourKey]) {
+        hourBuckets[hourKey] = { touchedMinutes: 0, lastTouchedTime: null };
+      }
+
+      if (touched) {
+        const bucket = hourBuckets[hourKey];
+        if (bucket.lastTouchedTime) {
+          // Add minutes since last touched reading (capped at 10 min gap to avoid overcounting)
+          const minutesDiff = Math.min(
+            (timestamp.getTime() - bucket.lastTouchedTime.getTime()) / 60000,
+            10
+          );
+          bucket.touchedMinutes += minutesDiff;
+        } else {
+          // First touched reading in this hour — count as 1 minute
+          bucket.touchedMinutes += 1;
+        }
+        bucket.lastTouchedTime = timestamp;
+      } else {
+        // Reset last touched time on untouched reading
+        hourBuckets[hourKey].lastTouchedTime = null;
+      }
+    }
+
+    // Count hours where touched >= 30 minutes
+    return Object.values(hourBuckets).filter((b) => b.touchedMinutes >= 30).length;
+  } catch (error) {
+    console.error('Error calculating wear hours:', error);
+    return 0;
+  }
+}
