@@ -1,14 +1,14 @@
 # Pressure Injury Prevention (PIP) System
 
-A healthcare system for managing fluidized positioners to prevent pressure injuries. Integrates with Medplum EHR for patient and device tracking.
+A healthcare system for managing fluidized positioners to prevent pressure injuries. Integrates with Medplum EHR for patient and device tracking. Allows for reusability of positioners across multiple patients, device usage insights, device usage monitoring, and increased sustainability. 
 
 ---
 
-## 🚀 Live Deployments
+## Live Deployments
 
 | Application | Live URL |
 |-------------|----------|
-| **PIP Fleet Dashboard** | *Pending deployment* |
+| **PIP Fleet Dashboard** | [pip-clinical-dashboard.vercel.app](https://pip-clinical-dashboard.vercel.app/) |
 | **Hospital Scanner** | [pip-hospital-scanner.vercel.app](https://pip-hospital-scanner.vercel.app/) |
 | **Mölnlycke Dashboard** | [pip-molnlycke-dashboard.vercel.app](https://pip-molnlycke-dashboard.vercel.app/) |
 | **Standalone Dashboard** | [pip-standalone-dashboard.vercel.app](https://pip-standalone-dashboard.vercel.app/) |
@@ -45,7 +45,7 @@ cd 2026-PIP
 
 ---
 
-## 🔐 Medplum Setup (Required for PIP Fleet Dashboard)
+## Medplum Setup (Required for PIP Fleet Dashboard)
 
 The PIP Fleet Dashboard requires a Medplum account for authentication and data storage.
 
