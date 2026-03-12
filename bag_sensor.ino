@@ -15,116 +15,107 @@ const char* clientSecret = "";
 const char* bagId = "";
 const char* deviceId = "";
 
-// ===== PRESSURE SENSOR CONFIGURATION (kept for future use) =====
-const int FSR_PIN = 34;                     // GPIO pin connected to FSR sensor (ADC pin)
-const int PRESSURE_THRESHOLD = 500;         // Adjust based on sensor (0-4095 range)
+// ===== SENSOR CONFIGURATION =====
+const int FSR_PIN = 34;
+const int PRESSURE_THRESHOLD = 500;
+const int CAP_TOUCH_DROP = 90;
+const int CAP_AVG_WINDOW = 8;
 
-// ===== CAPACITIVE SENSOR CONFIGURATION =====
-const int CAP_TOUCH_DROP = 90;            // How much the value must drop to count as touched
-const int CAP_AVG_WINDOW = 8;             // Moving average window size
-float capBaseline = 0;                     // Auto-calibrating baseline
-// ===== TIMING =====
-const unsigned long SEND_INTERVAL = 10000; // Send update every 10 seconds
+// ===== SLEEP CONFIGURATION =====
+const uint64_t SLEEP_DURATION_US = 22ULL * 60 * 1000000; // 22 minutes in microseconds
 
-// ===== GLOBAL VARIABLES =====
+// ===== RTC MEMORY — persists across deep sleep cycles =====
+RTC_DATA_ATTR float capBaseline = 0;
+RTC_DATA_ATTR bool firstBoot = true;
+
+// ===== GLOBAL =====
 String accessToken = "";
-unsigned long lastSendTime = 0;
 
-// Pressure sensor state
-bool lastPressureOccupied = false;
-
-// Capacitive sensor state
-int capBuf[8];
-int capIdx = 0;
-long capSum = 0;
-bool lastCapTouched = false;
-
-// ===== SETUP =====
+// ===== SETUP — runs once per wake cycle =====
 void setup() {
   Serial.begin(115200);
   pinMode(FSR_PIN, INPUT);
+  delay(100);
 
-  Serial.println("\n\n=== Positioner Bag Sensor ===");
+  Serial.println("\n=== Positioner Bag Sensor (Wake Cycle) ===");
+  Serial.print("Wake reason: ");
+  Serial.println(esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER ? "Timer" : "Power-on/Reset");
 
-  // Init capacitive moving average buffer
-  for (int i = 0; i < CAP_AVG_WINDOW; i++) {
-    int v = touchRead(T0);
-    capBuf[i] = v;
-    capSum += v;
-    delay(20);
-    capBaseline = capSum / CAP_AVG_WINDOW;
+  // --- Calibrate capacitive baseline on first boot only ---
+  if (firstBoot) {
+    Serial.println("First boot: calibrating capacitive baseline...");
+    long sum = 0;
+    for (int i = 0; i < CAP_AVG_WINDOW; i++) {
+      sum += touchRead(T0);
+      delay(20);
+    }
+    capBaseline = sum / CAP_AVG_WINDOW;
+    firstBoot = false;
+    Serial.print("Baseline set to: ");
+    Serial.println(capBaseline);
   }
 
-  Serial.print("Connecting to WiFi: ");
-  Serial.println(ssid);
-
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-
-  Serial.println("\nWiFi Connected!");
-  Serial.print("IP Address: ");
-  Serial.println(WiFi.localIP());
-
-  if (authenticateWithMedplum()) {
-    Serial.println("✓ Authenticated with Medplum");
-  } else {
-    Serial.println("✗ Failed to authenticate with Medplum");
-  }
-}
-
-// ===== MAIN LOOP =====
-void loop() {
-  // --- Pressure sensor (kept intact) ---
+  // --- Read pressure sensor ---
   int pressureValue = analogRead(FSR_PIN);
   bool pressureOccupied = pressureValue > PRESSURE_THRESHOLD;
 
-  // --- Capacitive sensor (moving average) ---
-// --- Capacitive sensor (moving average + baseline detection) ---
-int capRaw = touchRead(T0);
-capSum -= capBuf[capIdx];
-capBuf[capIdx] = capRaw;
-capSum += capRaw;
-capIdx = (capIdx + 1) % CAP_AVG_WINDOW;
-int capAvg = capSum / CAP_AVG_WINDOW;
+  // --- Read capacitive sensor (averaged) ---
+  long capSum = 0;
+  int capRaw = 0;
+  for (int i = 0; i < CAP_AVG_WINDOW; i++) {
+    capRaw = touchRead(T0);
+    capSum += capRaw;
+    delay(20);
+  }
+  int capAvg = capSum / CAP_AVG_WINDOW;
+  bool capTouched = (capBaseline - capAvg) > CAP_TOUCH_DROP;
 
-bool capTouched = (capBaseline - capRaw) > CAP_TOUCH_DROP;
-if (!capTouched) {
-  capBaseline = capBaseline * 0.95 + capRaw * 0.05; // slowly drift with environment
-}
-
-  // Serial output
-  Serial.print("Pressure: "); Serial.print(pressureValue);
-  Serial.print(" | Pressure Occupied: "); Serial.print(pressureOccupied ? "YES" : "NO");
-  Serial.print(" | Cap raw="); Serial.print(capRaw);
-  Serial.print("  avg="); Serial.print(capAvg);
-  Serial.print("  touched="); Serial.println(capTouched ? "YES" : "NO");
-
-  unsigned long currentTime = millis();
-  bool stateChanged = (pressureOccupied != lastPressureOccupied) || (capTouched != lastCapTouched);
-
-  if (currentTime - lastSendTime >= SEND_INTERVAL || stateChanged) {
-    if (WiFi.status() == WL_CONNECTED) {
-
-      // Send pressure observation (existing, unchanged)
-      sendOccupancyToMedplum(pressureOccupied, pressureValue);
-
-      // Send capacitance observation (new, separate)
-      sendCapacitanceToMedplum(capTouched, capAvg);
-
-      lastSendTime = currentTime;
-      lastPressureOccupied = pressureOccupied;
-      lastCapTouched = capTouched;
-
-    } else {
-      Serial.println("WiFi disconnected. Reconnecting...");
-      WiFi.begin(ssid, password);
-    }
+  // Update baseline slowly if not touched (drift compensation, saved to RTC)
+  if (!capTouched) {
+    capBaseline = capBaseline * 0.95 + capAvg * 0.05;
   }
 
-  delay(1000);
+  Serial.print("Pressure: "); Serial.print(pressureValue);
+  Serial.print(" | Occupied: "); Serial.print(pressureOccupied ? "YES" : "NO");
+  Serial.print(" | Cap avg: "); Serial.print(capAvg);
+  Serial.print(" | Baseline: "); Serial.print(capBaseline);
+  Serial.print(" | Touched: "); Serial.println(capTouched ? "YES" : "NO");
+
+  // --- Connect WiFi & send ---
+  Serial.print("Connecting to WiFi...");
+  WiFi.begin(ssid, password);
+
+  int wifiRetries = 0;
+  while (WiFi.status() != WL_CONNECTED && wifiRetries < 20) {
+    delay(500);
+    Serial.print(".");
+    wifiRetries++;
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\nWiFi connected.");
+    if (authenticateWithMedplum()) {
+      sendOccupancyToMedplum(pressureOccupied, pressureValue);
+      sendCapacitanceToMedplum(capTouched, capAvg);
+    } else {
+      Serial.println("✗ Auth failed. Skipping send.");
+    }
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+  } else {
+    Serial.println("\n✗ WiFi failed. Skipping send.");
+  }
+
+  // --- Go to deep sleep ---
+  Serial.print("Sleeping for 22 minutes... ");
+  Serial.flush();
+  esp_sleep_enable_timer_wakeup(SLEEP_DURATION_US);
+  esp_deep_sleep_start();
+  // Nothing below here runs — deep sleep resets execution to setup()
+}
+
+void loop() {
+  // Never reached during normal deep sleep operation
 }
 
 // ===== AUTHENTICATE WITH MEDPLUM =====
@@ -149,23 +140,15 @@ bool authenticateWithMedplum() {
     http.end();
     return true;
   } else {
-    Serial.print("Auth failed. HTTP Response code: ");
+    Serial.print("Auth failed. Code: ");
     Serial.println(httpResponseCode);
     http.end();
     return false;
   }
 }
 
-// ===== SEND PRESSURE/OCCUPANCY DATA TO MEDPLUM (original, unchanged) =====
+// ===== SEND PRESSURE/OCCUPANCY =====
 void sendOccupancyToMedplum(bool occupied, int pressureValue) {
-  if (accessToken == "") {
-    Serial.println("No access token. Authenticating...");
-    if (!authenticateWithMedplum()) {
-      Serial.println("Authentication failed. Cannot send data.");
-      return;
-    }
-  }
-
   HTTPClient http;
   http.begin(String(medplumBaseUrl) + "/fhir/R4/Observation");
   http.addHeader("Content-Type", "application/fhir+json");
@@ -191,42 +174,24 @@ void sendOccupancyToMedplum(bool occupied, int pressureValue) {
 
   JsonArray components = doc.createNestedArray("component");
   JsonObject pressureComponent = components.createNestedObject();
-  JsonObject pressureCode = pressureComponent.createNestedObject("code");
-  pressureCode["text"] = "Pressure Reading";
-  JsonObject pressureValue_obj = pressureComponent.createNestedObject("valueQuantity");
-  pressureValue_obj["value"] = pressureValue;
-  pressureValue_obj["unit"] = "raw";
+  pressureComponent.createNestedObject("code")["text"] = "Pressure Reading";
+  JsonObject pv = pressureComponent.createNestedObject("valueQuantity");
+  pv["value"] = pressureValue;
+  pv["unit"] = "raw";
 
   String jsonString;
   serializeJson(doc, jsonString);
 
   int httpResponseCode = http.POST(jsonString);
-
-  if (httpResponseCode == 201 || httpResponseCode == 200) {
-    Serial.println("✓ Pressure/occupancy data sent to Medplum");
-  } else if (httpResponseCode == 401) {
-    Serial.println("✗ Token expired. Re-authenticating...");
-    accessToken = "";
-    authenticateWithMedplum();
-  } else {
-    Serial.print("✗ Failed to send pressure data. HTTP Response code: ");
-    Serial.println(httpResponseCode);
-    Serial.println(http.getString());
-  }
+  Serial.println(httpResponseCode == 201 || httpResponseCode == 200
+    ? "✓ Pressure/occupancy sent"
+    : "✗ Failed to send pressure data (code: " + String(httpResponseCode) + ")");
 
   http.end();
 }
 
-// ===== SEND CAPACITANCE DATA TO MEDPLUM (new, separate observation) =====
+// ===== SEND CAPACITANCE =====
 void sendCapacitanceToMedplum(bool touched, int capAvg) {
-  if (accessToken == "") {
-    Serial.println("No access token. Authenticating...");
-    if (!authenticateWithMedplum()) {
-      Serial.println("Authentication failed. Cannot send capacitance data.");
-      return;
-    }
-  }
-
   HTTPClient http;
   http.begin(String(medplumBaseUrl) + "/fhir/R4/Observation");
   http.addHeader("Content-Type", "application/fhir+json");
@@ -250,37 +215,25 @@ void sendCapacitanceToMedplum(bool touched, int capAvg) {
   doc["effectiveDateTime"] = getCurrentTimestamp();
   doc["valueBoolean"] = touched;
 
-  // Raw average reading stored as component for debugging
   JsonArray components = doc.createNestedArray("component");
   JsonObject capComponent = components.createNestedObject();
-  JsonObject capCode = capComponent.createNestedObject("code");
-  capCode["text"] = "Capacitance Average Reading";
-  JsonObject capValue_obj = capComponent.createNestedObject("valueQuantity");
-  capValue_obj["value"] = capAvg;
-  capValue_obj["unit"] = "raw";
+  capComponent.createNestedObject("code")["text"] = "Capacitance Average Reading";
+  JsonObject cv = capComponent.createNestedObject("valueQuantity");
+  cv["value"] = capAvg;
+  cv["unit"] = "raw";
 
   String jsonString;
   serializeJson(doc, jsonString);
 
   int httpResponseCode = http.POST(jsonString);
-
-  if (httpResponseCode == 201 || httpResponseCode == 200) {
-    Serial.println("✓ Capacitance data sent to Medplum");
-  } else if (httpResponseCode == 401) {
-    Serial.println("✗ Token expired. Re-authenticating...");
-    accessToken = "";
-    authenticateWithMedplum();
-  } else {
-    Serial.print("✗ Failed to send capacitance data. HTTP Response code: ");
-    Serial.println(httpResponseCode);
-    Serial.println(http.getString());
-  }
+  Serial.println(httpResponseCode == 201 || httpResponseCode == 200
+    ? "✓ Capacitance sent"
+    : "✗ Failed to send capacitance data (code: " + String(httpResponseCode) + ")");
 
   http.end();
 }
 
-// ===== GET CURRENT TIMESTAMP =====
+// ===== TIMESTAMP =====
 String getCurrentTimestamp() {
-  // For production: sync with NTP server
   return "2026-02-01T00:00:00Z";
 }
