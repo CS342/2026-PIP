@@ -8,11 +8,12 @@ import { defineConfig } from 'vite';
 
 dns.setDefaultResultOrder('verbatim');
 
-if (!existsSync(path.join(__dirname, '.env'))) {
-  copyFileSync(path.join(__dirname, '.env.defaults'), path.join(__dirname, '.env'));
+// Only copy .env.defaults to .env in local development (not on Vercel)
+const envPath = path.join(__dirname, '.env');
+const envDefaultsPath = path.join(__dirname, '.env.defaults');
+if (!existsSync(envPath) && existsSync(envDefaultsPath)) {
+  copyFileSync(envDefaultsPath, envPath);
 }
-
-dns.setDefaultResultOrder('verbatim');
 
 // https://vitejs.dev/config/
 export default defineConfig({
