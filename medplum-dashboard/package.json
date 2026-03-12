@@ -1,5 +1,5 @@
 {
-  "name": "medplum-hello-world",
+  "name": "medplum-dashboard",
   "version": "5.0.13",
   "private": true,
   "type": "module",

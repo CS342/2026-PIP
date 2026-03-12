@@ -9,11 +9,10 @@ export function LandingPage(): JSX.Element {
   return (
     <Document width={500}>
       <Stack align="center">
-        <Title order={2}>Welcome!</Title>
+        <Title order={2}>PIP Fleet Dashboard</Title>
         <Text>
-          This "Hello World" example demonstrates how to build a simple React application that fetches Patient data from
-          Medplum. If you haven't already done so, <Anchor href="https://app.medplum.com/register">register</Anchor> for
-          Medplum Project. After that you can sign into your project by clicking the link below.
+          Welcome to the Pressure Injury Prevention (PIP) system. Manage fluidized positioners, track patient
+          assignments, monitor expiration dates, and view real-time sensor data — all integrated with your Medplum EHR.
         </Text>
         <Button component={Link} to="/signin">
           Sign in

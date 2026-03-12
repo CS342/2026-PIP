@@ -20,15 +20,15 @@ npm --version    # Should show v10.x+
 
 | App | Setup & Run | URL |
 |-----|-------------|-----|
-| **Medplum Dashboard** | `cd medplum-hello-world && npm install && npm run dev` | [localhost:3000](http://localhost:3000) |
+| **PIP Fleet Dashboard** | `cd medplum-dashboard && npm install && npm run dev` | [localhost:3000](http://localhost:3000) |
 | **Hospital Scanner** | `cd hospital-scanner && npm install && npm run dev` | [localhost:3001](http://localhost:3001) |
 | **Mölnlycke Dashboard** | `cd molnlycke-dashboard && npm install && npm run dev` | [localhost:5173](http://localhost:5173) |
 
-### 3. Medplum Configuration (Required for Medplum Dashboard)
+### 3. Medplum Configuration (Required for PIP Fleet Dashboard)
 
 1. Create a Medplum account at [medplum.com](https://www.medplum.com/)
 2. Follow the [registration tutorial](https://www.medplum.com/docs/tutorials/register)
-3. In the `medplum-hello-world/` folder:
+3. In the `medplum-dashboard/` folder:
    ```bash
    cp .env.defaults .env
    ```
@@ -38,7 +38,7 @@ npm --version    # Should show v10.x+
 
 ## Applications
 
-### `medplum-hello-world/` — Main Dashboard
+### `medplum-dashboard/` — PIP Fleet Dashboard
 
 Full-featured Medplum-integrated application:
 - **Patients** — View/manage patients from Medplum EHR
@@ -65,7 +65,7 @@ Fleet analytics and insights:
 ## Project Structure
 
 ```
-├── medplum-hello-world/    # Main Medplum + React app
+├── medplum-dashboard/      # Main PIP Fleet Dashboard (Medplum + React)
 ├── hospital-scanner/       # Standalone scanner app
 ├── molnlycke-dashboard/    # Analytics dashboard
 ├── dashboard/              # UI prototype (reference only)
